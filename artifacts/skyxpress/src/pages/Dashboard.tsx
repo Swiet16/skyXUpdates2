@@ -118,7 +118,7 @@ const Dashboard = () => {
 
       {/* ─── Dashboard Header ─── */}
       <section
-        className={`relative overflow-hidden border-b ${isPrivileged ? "border-white/10" : "border-border"} ${meta.headerClass}`}
+        className={`relative overflow-hidden border-b pt-[175px] md:pt-[195px] ${isPrivileged ? "border-white/10" : "border-border"} ${meta.headerClass}`}
       >
         {/* Glow blobs for privileged users */}
         {isPrivileged && (

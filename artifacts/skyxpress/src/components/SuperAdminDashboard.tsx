@@ -148,8 +148,8 @@ export const SuperAdminDashboard = ({ user, profile }: SuperAdminDashboardProps)
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="overflow-x-auto">
-          <TabsList className="h-auto flex-wrap gap-1 bg-white/5 border border-white/10 p-1">
+        <div className="w-full">
+          <TabsList className="h-auto flex-wrap gap-1 bg-white/5 border border-white/10 p-1 w-full justify-start">
             {[
               { value: "overview", label: "Overview", icon: BarChart3 },
               { value: "partners", label: "Partners", icon: Building2 },

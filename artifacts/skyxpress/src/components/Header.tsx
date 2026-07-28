@@ -18,7 +18,7 @@ const Header = ({ user }: HeaderProps) => {
   const { toast } = useToast();
   const { isDark, toggle } = useTheme();
 
-  // Auto-hide on scroll down, show on scroll up
+  // Auto-hide on scroll down, reveal on scroll up
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
@@ -32,7 +32,6 @@ const Header = ({ user }: HeaderProps) => {
       }
       setLastScrollY(currentY);
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
@@ -85,23 +84,23 @@ const Header = ({ user }: HeaderProps) => {
       style={{ transform: isVisible ? "translateY(0)" : "translateY(-100%)" }}
     >
       <div className="container mx-auto px-4">
-        {/* Desktop */}
-        <div className="hidden md:flex items-center justify-between py-3">
-          {/* Logo */}
-          <Link to="/" className="flex items-center group shrink-0">
+
+        {/* ── Desktop ── */}
+        <div className="hidden md:flex flex-col items-center py-4">
+          {/* Logo — centered */}
+          <Link to="/" className="flex items-center justify-center group mb-3">
             <img
               src="https://thunaolandjuvuhvbsds.supabase.co/storage/v1/object/public/File/Logo1.png"
               alt="SkyXpress Logo"
-              className="h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+              className="h-[120px] w-auto object-contain transition-transform duration-200 group-hover:scale-105"
             />
           </Link>
 
-          {/* Nav + Auth + Theme */}
-          <div className="flex items-center gap-8">
+          {/* Nav + controls row — centered */}
+          <div className="flex items-center justify-center gap-8">
             <nav className="flex items-center space-x-8">
               <NavLinks />
             </nav>
-
             <div className="flex items-center gap-3">
               <ThemeToggle />
               {user ? (
@@ -125,18 +124,18 @@ const Header = ({ user }: HeaderProps) => {
           </div>
         </div>
 
-        {/* Mobile */}
-        <div className="md:hidden flex items-center justify-between py-3">
-          {/* Logo */}
-          <Link to="/" className="flex items-center group">
+        {/* ── Mobile ── */}
+        <div className="md:hidden flex flex-col items-center py-3">
+          {/* Logo — centered */}
+          <Link to="/" className="flex items-center justify-center group mb-2">
             <img
               src="https://thunaolandjuvuhvbsds.supabase.co/storage/v1/object/public/File/Logo1.png"
               alt="SkyXpress Logo"
-              className="h-10 w-auto object-contain"
+              className="h-[70px] w-auto object-contain"
             />
           </Link>
 
-          {/* Mobile controls */}
+          {/* Controls row */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button
@@ -184,6 +183,7 @@ const Header = ({ user }: HeaderProps) => {
             </nav>
           </div>
         )}
+
       </div>
     </header>
   );
