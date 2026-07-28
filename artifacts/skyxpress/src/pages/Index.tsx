@@ -51,7 +51,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header user={user} />
-      <main>
+      <main className="pt-[88px]">
         {/* Hero Image Slider Section - Now First */}
         <section className="bg-background">
           <div className="container mx-auto px-4">

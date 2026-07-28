@@ -655,7 +655,7 @@ export default function Manifest() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 pt-[88px] pb-4 sm:pb-6 max-w-7xl">
 
         {/* Page title + Reference search */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">

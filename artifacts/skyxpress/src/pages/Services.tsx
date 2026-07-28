@@ -46,7 +46,7 @@ const Services = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main>
+      <main className="pt-[88px]">
         {/* Hero Section */}
         <section className="py-16 bg-gradient-to-r from-primary/10 to-primary/5">
           <div className="container mx-auto px-4 text-center">

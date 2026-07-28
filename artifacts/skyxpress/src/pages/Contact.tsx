@@ -7,7 +7,7 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main>
+      <main className="pt-[88px]">
         <section className="py-16 bg-gradient-to-r from-primary/10 to-primary/5">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-5xl font-bold text-foreground mb-6">Contact Us</h1>

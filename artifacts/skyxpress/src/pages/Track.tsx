@@ -6,7 +6,7 @@ const Track = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 pt-[88px] pb-12">
         <PublicTracking />
       </main>
       <Footer />

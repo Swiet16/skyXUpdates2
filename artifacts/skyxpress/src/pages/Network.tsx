@@ -34,7 +34,7 @@ const Network = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main>
+      <main className="pt-[88px]">
         <section className="py-16 bg-gradient-to-r from-primary/10 to-primary/5">
           <div className="container mx-auto px-4 text-center">
             <Globe className="h-16 w-16 text-primary mx-auto mb-6" />
