@@ -5,9 +5,9 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.error(
-    '[SkyXpress] Missing Supabase environment variables.\n' +
-    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your Vercel project settings.'
+  console.warn(
+    '[SkyXpress] Supabase environment variables are not set.\n' +
+    'Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY as Replit Secrets to enable live data.'
   );
 }
 
