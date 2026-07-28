@@ -1,0 +1,513 @@
+# Updated Prompt – Role-Based System (Super Admin / Admin Partner / User)
+
+
+
+
+
+
+
+
+
+
+
+## User Roles
+
+
+
+### 1. Super Admin
+
+
+
+The Super Admin has complete control over the entire platform.
+
+
+
+Permissions:
+
+
+
+* View every parcel created across all partners/offices.
+
+* View all users, admins, offices, and partners.
+
+* Create, edit, delete, or suspend any account.
+
+* Create and manage Admin Partner accounts.
+
+* Assign or revoke permissions.
+
+* Manage all parcels, invoices, bills, expenses, payments, reports, and settings.
+
+* View complete analytics and dashboards.
+
+* Transfer parcels between partners if needed.
+
+* Change parcel status at any stage.
+
+* View activity logs of every action.
+
+* View who created, updated, delivered, cancelled, or modified every parcel.
+
+* Manage system settings, pricing, parcel charges, notifications, and other global configurations.
+
+* Only Super Admin can change system-wide settings and permissions.
+
+
+
+---
+
+
+
+### 2. Admin Partner
+
+
+
+Admin accounts are created only by the Super Admin.
+
+
+
+This role is designed for franchise offices or business partners.
+
+
+
+Permissions:
+
+
+
+* Login to their own dashboard.
+
+* Create parcels.
+
+* Edit their own parcels.
+
+* Update parcel status.
+
+* Generate invoices, bills, receipts, and reports for their own business.
+
+* Manage customers created by their own office.
+
+* View only their own parcels.
+
+* View only their own customers.
+
+* View only their own financial reports.
+
+* View only their own expenses.
+
+* View only their own earnings.
+
+* View only their own staff (if enabled).
+
+
+
+Restrictions:
+
+
+
+* Cannot access other partners' parcels.
+
+* Cannot access Super Admin dashboard.
+
+* Cannot view global users.
+
+* Cannot change system settings.
+
+* Cannot change permissions.
+
+* Cannot delete system records outside their own office.
+
+* Cannot see data belonging to another partner.
+
+
+
+Every parcel created by an Admin Partner must automatically store:
+
+
+
+* Created By
+
+* Partner Name
+
+* Office Name
+
+* Created Date
+
+* Last Updated By
+
+* Last Updated Time
+
+
+
+---
+
+
+
+### 3. User
+
+
+
+Users have the most limited access.
+
+
+
+Permissions:
+
+
+
+* Login securely.
+
+* Create their own parcel requests (if enabled).
+
+* Track only their own parcels.
+
+* View only their own parcel history.
+
+* View invoices related to their own parcels.
+
+* Update personal profile.
+
+
+
+Restrictions:
+
+
+
+* Cannot access admin dashboards.
+
+* Cannot access other users' data.
+
+* Cannot modify system settings.
+
+* Cannot view reports.
+
+* Cannot manage parcels belonging to others.
+
+
+
+---
+
+
+
+# Dashboard Design
+
+
+
+Create three completely different dashboards:
+
+
+
+### Super Admin Dashboard
+
+
+
+Premium analytics with:
+
+
+
+* Total Parcels
+
+* Delivered Parcels
+
+* Pending Parcels
+
+* Returned Parcels
+
+* Cancelled Parcels
+
+* Revenue
+
+* Expenses
+
+* Active Partners
+
+* Active Users
+
+* Monthly Reports
+
+* Live Activity Feed
+
+* Recent Parcel Timeline
+
+* Charts
+
+* Maps
+
+* Notifications
+
+
+
+---
+
+
+
+### Admin Partner Dashboard
+
+
+
+Focused only on partner data:
+
+
+
+* Today's Parcels
+
+* Pending Parcels
+
+* Delivered Parcels
+
+* Revenue
+
+* Expenses
+
+* Customer Count
+
+* Recent Activity
+
+* Daily Reports
+
+* Monthly Reports
+
+* Parcel Status Overview
+
+
+
+---
+
+
+
+### User Dashboard
+
+
+
+Simple and clean:
+
+
+
+* My Parcels
+
+* Parcel Tracking
+
+* Delivery History
+
+* Payment History
+
+* Notifications
+
+* Profile Settings
+
+
+
+---
+
+
+
+# Parcel Ownership System
+
+
+
+Every parcel must permanently store ownership information.
+
+
+
+Fields include:
+
+
+
+* Parcel ID
+
+* Created By User ID
+
+* Created By Name
+
+* Partner ID
+
+* Partner Name
+
+* Office ID
+
+* Office Name
+
+* Created Date
+
+* Updated Date
+
+* Updated By
+
+* Delivery Agent
+
+* Current Status
+
+* Last Status Update
+
+* Activity History
+
+
+
+Display badges such as:
+
+
+
+* Created by Partner
+
+* Updated by Partner
+
+* Delivered by Partner
+
+* Cancelled by Partner
+
+
+
+Include a stylish activity timeline showing every update made to the parcel.
+
+
+
+---
+
+
+
+# Multi-Office / Partnership System
+
+
+
+Support unlimited partner offices.
+
+
+
+Each partner has completely isolated data:
+
+
+
+* Own parcels
+
+* Own customers
+
+* Own invoices
+
+* Own bills
+
+* Own expenses
+
+* Own reports
+
+* Own staff
+
+
+
+Super Admin can switch between offices and view all data globally.
+
+
+
+---
+
+
+
+# UI / UX
+
+
+
+Create a premium, modern interface with:
+
+
+
+* Glassmorphism
+
+* Smooth animations
+
+* Framer Motion
+
+* Beautiful gradients
+
+* Responsive design
+
+* Dark & Light mode
+
+* Professional courier dashboard
+
+* Modern cards
+
+* Animated statistics
+
+* Elegant tables
+
+* Status badges
+
+* Timeline views
+
+* Activity logs
+
+* Unique parcel tracking pages
+
+
+
+---
+
+
+
+# Security Rules
+
+
+
+* Implement proper Role-Based Access Control (RBAC).
+
+* Protect all pages using secure route guards.
+
+* Enforce Row-Level Security (RLS) in Supabase.
+
+* Prevent unauthorized data access.
+
+* Every query must return only the data allowed for that user's role.
+
+* Log every important action for auditing.
+
+
+
+---
+
+
+
+# Database
+
+
+
+Generate the complete SQL schema for all required tables, relationships, indexes, Row-Level Security (RLS) policies, triggers, and helper functions.
+
+
+
+Include all SQL needed for:
+
+
+
+* Super Admin
+
+* Admin Partner
+
+* User
+
+* Offices
+
+* Partners
+
+* Parcels
+
+* Customers
+
+* Bills
+
+* Invoices
+
+* Expenses
+
+* Payments
+
+* Activity Logs
+
+* Notifications
+
+* Reports
+
+* Parcel Status History
+
+* Audit Logs
+
+
+
+Ensure the SQL is production-ready, secure, optimized, and fully compatible with Supabase.
