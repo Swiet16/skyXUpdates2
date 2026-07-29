@@ -18,23 +18,16 @@ const Header = ({ user }: HeaderProps) => {
   const { toast } = useToast();
   const { isDark, toggle } = useTheme();
 
-  // Auto-hide on scroll down, reveal on scroll up
+  // Only show when scrolled all the way to the top
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
-      if (currentY < 10) {
-        setIsVisible(true);
-      } else if (currentY > lastScrollY + 5) {
-        setIsVisible(false);
-        setIsMenuOpen(false);
-      } else if (currentY < lastScrollY - 5) {
-        setIsVisible(true);
-      }
-      setLastScrollY(currentY);
+      setIsVisible(currentY < 10);
+      if (currentY >= 10) setIsMenuOpen(false);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
