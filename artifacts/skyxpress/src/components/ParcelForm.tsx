@@ -227,55 +227,176 @@ const QuickFill = ({
   </div>
 );
 
-// ─── Service type pill selector ───────────────────────────────────────────────
+// ─── Service type card selector ──────────────────────────────────────────────
+const SERVICE_ICONS: Record<string, string> = {
+  standard: "🚚", express: "⚡", overnight: "🌙", economic: "🌿",
+  priority: "🏆", dhl_pk: "🔴", ups_pk: "🟤", skynet: "🔵",
+  dpd_uk: "🟣", dhl_via_uk: "✈️", ups_via_belfast: "🟠", ups_saver: "💰",
+};
+
 const ServicePicker = ({
   value, onChange,
 }: { value: string; onChange: (v: string) => void }) => (
-  <div className="col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-    {SERVICE_TYPES.map((s) => (
-      <button
-        key={s.value}
-        type="button"
-        onClick={() => onChange(s.value)}
-        className={`rounded-xl border px-3 py-2 text-left transition-all ${
-          value === s.value
-            ? "border-current shadow-sm"
-            : "border-white/8 bg-white/3 hover:bg-white/6"
-        }`}
-        style={value === s.value ? {
-          borderColor: `${s.color}50`,
-          background: `${s.color}12`,
-        } : {}}
-      >
-        <p className="text-xs font-semibold" style={{ color: value === s.value ? s.color : "rgba(255,255,255,0.7)" }}>
-          {s.label}
-        </p>
-        <p className="text-[10px] text-white/35 mt-0.5">{s.desc}</p>
-      </button>
-    ))}
+  <div className="col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+    {SERVICE_TYPES.map((s) => {
+      const active = value === s.value;
+      return (
+        <motion.button
+          key={s.value}
+          type="button"
+          onClick={() => onChange(s.value)}
+          whileHover={{ scale: 1.03, y: -1 }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          className="relative rounded-xl border text-left overflow-hidden transition-colors duration-200"
+          style={{
+            borderColor: active ? `${s.color}60` : "rgba(255,255,255,0.07)",
+            background: active ? `${s.color}14` : "rgba(255,255,255,0.03)",
+            boxShadow: active ? `0 0 18px 0 ${s.color}22, inset 0 0 0 1px ${s.color}30` : "none",
+          }}
+        >
+          {/* colour accent strip */}
+          <div
+            className="absolute left-0 top-0 h-full w-1 rounded-l-xl transition-opacity"
+            style={{ background: s.color, opacity: active ? 1 : 0.25 }}
+          />
+          <div className="pl-4 pr-3 py-2.5">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-base leading-none">{SERVICE_ICONS[s.value]}</span>
+              <p
+                className="text-xs font-bold leading-none transition-colors"
+                style={{ color: active ? s.color : "rgba(255,255,255,0.75)" }}
+              >
+                {s.label}
+              </p>
+            </div>
+            <p className="text-[10px] text-white/35 mt-1">{s.desc}</p>
+          </div>
+          {active && (
+            <motion.div
+              layoutId="service-active-dot"
+              className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full"
+              style={{ background: s.color }}
+            />
+          )}
+        </motion.button>
+      );
+    })}
   </div>
 );
 
+// ─── Document / Non-Document toggle ──────────────────────────────────────────
+const DocTypePicker = ({
+  value, onChange,
+}: { value: string; onChange: (v: string) => void }) => {
+  const opts = [
+    {
+      value: "document",
+      label: "Document",
+      emoji: "📄",
+      desc: "Letters, certificates, papers",
+      color: "#3B82F6",
+    },
+    {
+      value: "non-document",
+      label: "Non-Document",
+      emoji: "📦",
+      desc: "Goods, merchandise, gifts",
+      color: "#F97316",
+    },
+  ];
+  return (
+    <div className="col-span-2 grid grid-cols-2 gap-3">
+      {opts.map((o) => {
+        const active = value === o.value;
+        return (
+          <motion.button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 380, damping: 22 }}
+            className="relative rounded-2xl border p-4 text-center overflow-hidden transition-all duration-200"
+            style={{
+              borderColor: active ? `${o.color}55` : "rgba(255,255,255,0.08)",
+              background: active
+                ? `radial-gradient(ellipse at 50% 0%, ${o.color}20, ${o.color}08 70%)`
+                : "rgba(255,255,255,0.03)",
+              boxShadow: active ? `0 0 24px 0 ${o.color}18` : "none",
+            }}
+          >
+            {/* Top glow band */}
+            {active && (
+              <motion.div
+                layoutId="doc-type-glow"
+                className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 rounded-full"
+                style={{ background: `linear-gradient(90deg, transparent, ${o.color}, transparent)` }}
+              />
+            )}
+            <motion.div
+              animate={{ scale: active ? 1.15 : 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 18 }}
+              className="text-3xl mb-2 leading-none"
+            >
+              {o.emoji}
+            </motion.div>
+            <p
+              className="text-sm font-bold transition-colors"
+              style={{ color: active ? o.color : "rgba(255,255,255,0.7)" }}
+            >
+              {o.label}
+            </p>
+            <p className="text-[10px] text-white/35 mt-1 leading-snug">{o.desc}</p>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+};
+
 // ─── Parcel type pill ─────────────────────────────────────────────────────────
 const TypePicker = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-  <div className="col-span-2 flex gap-2">
-    {PARCEL_TYPES.map((t) => (
-      <button
-        key={t.value}
-        type="button"
-        onClick={() => onChange(t.value)}
-        className={`flex-1 rounded-xl border py-2.5 text-center transition-all ${
-          value === t.value
-            ? "border-[#F97316]/50 bg-[#F97316]/10"
-            : "border-white/8 bg-white/3 hover:bg-white/6"
-        }`}
-      >
-        <div className="text-lg">{t.icon}</div>
-        <div className={`text-[11px] font-medium mt-0.5 ${value === t.value ? "text-[#F97316]" : "text-white/50"}`}>
-          {t.label}
-        </div>
-      </button>
-    ))}
+  <div className="col-span-2 grid grid-cols-4 gap-2">
+    {PARCEL_TYPES.map((t) => {
+      const active = value === t.value;
+      return (
+        <motion.button
+          key={t.value}
+          type="button"
+          onClick={() => onChange(t.value)}
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          className="relative rounded-2xl border py-4 text-center overflow-hidden transition-all duration-200"
+          style={{
+            borderColor: active ? "rgba(249,115,22,0.55)" : "rgba(255,255,255,0.07)",
+            background: active
+              ? "radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.18), rgba(249,115,22,0.06) 80%)"
+              : "rgba(255,255,255,0.03)",
+            boxShadow: active ? "0 0 20px 0 rgba(249,115,22,0.18)" : "none",
+          }}
+        >
+          {active && (
+            <motion.div
+              layoutId="type-glow"
+              className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 rounded-full"
+              style={{ background: "linear-gradient(90deg, transparent, #F97316, transparent)" }}
+            />
+          )}
+          <motion.div
+            animate={{ scale: active ? 1.2 : 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 18 }}
+            className="text-2xl leading-none mb-1.5"
+          >
+            {t.icon}
+          </motion.div>
+          <div className={`text-[11px] font-semibold transition-colors ${active ? "text-[#F97316]" : "text-white/45"}`}>
+            {t.label}
+          </div>
+        </motion.button>
+      );
+    })}
   </div>
 );
 
@@ -500,12 +621,11 @@ export const ParcelForm = ({ onSuccess, parcel }: ParcelFormProps) => {
       <Field label="Pieces">
         <StyledInput type="number" min={1} value={formData.pieces} onChange={(e: any) => set("pieces", parseInt(e.target.value) || 1)} />
       </Field>
-      <Field label="Document Type">
-        <StyledSelect value={formData.document_type} onValueChange={(v: string) => set("document_type", v)} placeholder="Select type">
-          <SelectItem value="document" className="text-white text-sm">Document</SelectItem>
-          <SelectItem value="non-document" className="text-white text-sm">Non-Document</SelectItem>
-        </StyledSelect>
-      </Field>
+      <div className="col-span-2">
+        <Field label="Shipment Type">
+          <DocTypePicker value={formData.document_type} onChange={(v) => set("document_type", v)} />
+        </Field>
+      </div>
       <div className="col-span-2">
         <Field label="Service Type">
           <ServicePicker value={formData.service_type} onChange={(v) => set("service_type", v)} />

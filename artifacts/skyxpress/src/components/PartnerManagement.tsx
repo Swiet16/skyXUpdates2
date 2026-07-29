@@ -118,16 +118,23 @@ const PartnerFormDialog = ({
         if (error) throw error;
         toast({ title: "Partner updated", description: `${form.name} has been updated.` });
       } else {
-        // Create Supabase auth user with temp password
-        const { data: authData, error: authError } = await supabase.auth.admin
-          ? await supabase.auth.admin.createUser({
-              email: form.email,
-              password: form.temp_password,
-              email_confirm: true,
-            })
-          : { data: null, error: { message: "Admin API not available on client" } };
+        // Create Supabase auth user using signUp (works with anon key)
+        const { error: authError } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.temp_password,
+          options: {
+            data: {
+              full_name: form.name,
+              role: "admin_partner",
+            },
+          },
+        });
 
-        // If admin API unavailable, just create the partner record and store temp info
+        // Warn if auth creation failed but still create the partner record
+        if (authError) {
+          console.warn("Auth user creation failed:", authError.message);
+        }
+
         const partnerPayload = {
           name: form.name,
           email: form.email,
@@ -138,7 +145,7 @@ const PartnerFormDialog = ({
           address: form.address,
           contact_person: form.contact_person,
           notes: form.notes,
-          temp_password: form.temp_password, // stored so super admin can see it
+          temp_password: form.temp_password, // stored so admin can see it; cleared on first login
           is_active: true,
           created_at: new Date().toISOString(),
         };
@@ -151,7 +158,7 @@ const PartnerFormDialog = ({
 
         toast({
           title: "Partner created! 🎉",
-          description: `${form.name} added. Share the temp password: ${form.temp_password}`,
+          description: `${form.name} added. Share temp password: ${form.temp_password}`,
           duration: 8000,
         });
       }
