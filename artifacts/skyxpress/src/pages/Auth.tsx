@@ -140,14 +140,12 @@ const Auth = () => {
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
           .auth-display { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
-          @keyframes auth-glow { 0%,100%{box-shadow:0 0 18px 3px rgba(46,134,255,.18)} 50%{box-shadow:0 0 30px 6px rgba(46,134,255,.30)} }
-          .auth-ring { animation: auth-glow 3s ease-in-out infinite; }
         `}</style>
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-3 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#2E86FF] to-[#FF6A1A] flex items-center justify-center auth-ring">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#2E86FF] to-[#FF6A1A] flex items-center justify-center">
                 <Lock className="h-5 w-5 text-white" />
               </div>
               <span className="auth-display text-xl font-bold text-white">SkyXpress</span>
@@ -204,8 +202,6 @@ const Auth = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
         .auth-display { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
-        @keyframes auth-glow { 0%,100%{box-shadow:0 0 18px 3px rgba(46,134,255,.18)} 50%{box-shadow:0 0 30px 6px rgba(46,134,255,.30)} }
-        .auth-ring { animation: auth-glow 3s ease-in-out infinite; }
         @keyframes auth-fade-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
         .auth-fadein { animation: auth-fade-in .35s ease both; }
       `}</style>
@@ -220,7 +216,7 @@ const Auth = () => {
         {/* Logo block */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-5">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-[#2E86FF] to-[#1A4FCC] flex items-center justify-center shadow-xl auth-ring">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-[#2E86FF] to-[#1A4FCC] flex items-center justify-center shadow-xl">
               <svg viewBox="0 0 24 24" className="h-6 w-6 text-white fill-current">
                 <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>
               </svg>
