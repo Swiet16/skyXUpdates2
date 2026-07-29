@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -67,10 +66,21 @@ const getBarcodeBars = (value: string) => {
   });
 };
 
+// Deterministic ink-stamp tilt derived from a reference string, so every
+// stamped note reads as its own unique physical impression rather than a
+// repeated component.
+const getStampRotation = (value: string) => {
+  const source = value || "SKYXPRESS";
+  let hash = 0;
+  for (const ch of source) hash = (hash * 31 + ch.charCodeAt(0)) % 1000;
+  return (hash % 700) / 100 - 3.5; // range: -3.5deg to 3.5deg
+};
+
 // ---- Brand tokens -----------------------------------------------------
 // Ink navy for the fuselage, sky blue + beacon amber for instrumentation,
 // SkyXpress orange as the single hot accent. Paper is true white, printed
-// like a real ticket stub rather than a soft "app card".
+// like a real ticket stub rather than a soft "app card". Ink red is
+// reserved for the customs-stamp admin notes, distinct from the alert red.
 const TOKENS = {
   navy: "#0B2545",
   navyDeep: "#071A33",
@@ -82,6 +92,7 @@ const TOKENS = {
   slate: "#5B6B82",
   green: "#17A673",
   red: "#E5484D",
+  ink: "#AB3527",
   paper: "#FFFFFF",
 };
 
@@ -122,6 +133,77 @@ const formatStatusLabel = (status: string) =>
     .split(" ")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
+
+// ---- Ink-stamp admin note ------------------------------------------------
+// Styled like a customs / ops rubber stamp rather than a sticky note, to
+// stay inside the boarding-pass world: double ruled border, dashed inner
+// frame, faint printed grain, a seal glyph, and a stamp reference number.
+const StampNote = ({
+  note,
+  refCode,
+  size = "lg",
+}: {
+  note: string;
+  refCode: string;
+  size?: "lg" | "sm";
+}) => {
+  const rotation = useMemo(() => getStampRotation(refCode), [refCode]);
+  const isLg = size === "lg";
+
+  return (
+    <div
+      className="sx-stamp relative inline-block max-w-full transition-transform duration-200 hover:rotate-0"
+      style={{ ["--stamp-rot" as any]: `${rotation}deg`, transform: `rotate(${rotation}deg)` }}
+    >
+      <div
+        className={isLg ? "rounded-md border-[1.5px] p-[3px]" : "rounded border p-[2px]"}
+        style={{ borderColor: `${TOKENS.ink}99` }}
+      >
+        <div
+          className={isLg ? "rounded-[4px] border border-dashed px-4 py-3" : "rounded-[3px] border border-dashed px-3 py-2"}
+          style={{
+            borderColor: `${TOKENS.ink}55`,
+            backgroundColor: "#FFFDF8",
+            backgroundImage: `radial-gradient(${TOKENS.ink}20 0.5px, transparent 0.5px)`,
+            backgroundSize: "5px 5px",
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span
+              className="flex flex-shrink-0 items-center justify-center rounded-full border"
+              style={{ borderColor: TOKENS.ink, width: isLg ? 17 : 14, height: isLg ? 17 : 14 }}
+            >
+              <Plane
+                className={isLg ? "h-2.5 w-2.5" : "h-2 w-2"}
+                style={{ color: TOKENS.ink, transform: "rotate(45deg)" }}
+              />
+            </span>
+            <span
+              className={`sx-mono whitespace-nowrap font-bold uppercase tracking-[0.16em] ${isLg ? "text-[10px]" : "text-[9px]"}`}
+              style={{ color: TOKENS.ink }}
+            >
+              Official note · SkyXpress Ops
+            </span>
+          </div>
+
+          <p
+            className={`sx-display mt-1.5 font-semibold leading-snug ${isLg ? "text-sm" : "text-xs"}`}
+            style={{ color: TOKENS.ink }}
+          >
+            {note}
+          </p>
+
+          <p
+            className={`sx-mono mt-1.5 text-right font-medium opacity-60 ${isLg ? "text-[9px]" : "text-[8px]"}`}
+            style={{ color: TOKENS.ink }}
+          >
+            No. {(refCode || "0000").toString().toUpperCase().slice(-4)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const TrackingSection = () => {
   const [trackingQuery, setTrackingQuery] = useState("");
@@ -229,6 +311,7 @@ export const TrackingSection = () => {
 
   const isCancelled = trackingResult?.current_status === "cancelled";
   const stageIndex = trackingResult && !isCancelled ? getStageIndex(trackingResult.current_status) : 0;
+  const isDelivered = !isCancelled && stageIndex === STAGES.length - 1;
   const progressPercent = STAGES.length > 1 ? (stageIndex / (STAGES.length - 1)) * 100 : 0;
 
   const barcodeBars = useMemo(
@@ -239,6 +322,9 @@ export const TrackingSection = () => {
     .toString()
     .toUpperCase()
     .slice(-6);
+
+  const StatusChipIcon = isCancelled ? XCircle : STAGES[stageIndex]?.icon || Clock;
+  const statusChipColor = isCancelled ? TOKENS.red : isDelivered ? TOKENS.green : TOKENS.orange;
 
   return (
     <section className="relative overflow-hidden bg-[#F5F8FC] py-20">
@@ -262,8 +348,14 @@ export const TrackingSection = () => {
           background: conic-gradient(from 0deg, transparent 0deg, rgba(23,166,115,0.55) 70deg, transparent 100deg);
           animation: sx-radar-spin 2.4s linear infinite;
         }
+        @keyframes sx-stamp-press {
+          0% { opacity: 0; transform: scale(1.25) rotate(var(--stamp-rot)); }
+          60% { opacity: 1; transform: scale(0.95) rotate(var(--stamp-rot)); }
+          100% { opacity: 1; transform: scale(1) rotate(var(--stamp-rot)); }
+        }
+        .sx-stamp { animation: sx-stamp-press 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
         @media (prefers-reduced-motion: reduce) {
-          .sx-flicker, .sx-glide, .sx-beacon, .sx-radar::before { animation: none !important; }
+          .sx-flicker, .sx-glide, .sx-beacon, .sx-radar::before, .sx-stamp { animation: none !important; }
         }
       `}</style>
 
@@ -335,12 +427,23 @@ export const TrackingSection = () => {
                   <span className="sx-mono text-[11px] font-medium uppercase tracking-[0.25em] text-white/50">
                     Boarding pass · {isCancelled ? "Cancelled" : "Active shipment"}
                   </span>
-                  <Badge
-                    className="rounded-full border-0 px-3 py-1 text-xs font-semibold text-white"
-                    style={{ backgroundColor: isCancelled ? TOKENS.red : TOKENS.orange }}
+
+                  {/* Gate status chip: icon + label, with a live beacon while the
+                      parcel is still moving through the journey. */}
+                  <span
+                    className="relative inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-xs font-bold text-white shadow-sm"
+                    style={{ backgroundColor: statusChipColor }}
                   >
-                    {formatStatusLabel(trackingResult.current_status)}
-                  </Badge>
+                    <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                      {!isCancelled && !isDelivered && (
+                        <span className="absolute inset-0 animate-ping rounded-full bg-white/50 motion-reduce:animate-none" />
+                      )}
+                      <StatusChipIcon className="relative h-3 w-3" />
+                    </span>
+                    <span className="sx-mono uppercase tracking-wide">
+                      {formatStatusLabel(trackingResult.current_status)}
+                    </span>
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-8 px-6 py-8 sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4 sm:px-10 sm:py-10">
@@ -391,12 +494,7 @@ export const TrackingSection = () => {
 
                 {trackingResult.admin_note && (
                   <div className="px-6 pb-6 sm:px-10">
-                    <div className="sx-display relative inline-block max-w-full rotate-[-1deg] rounded-lg border border-dashed border-[#FFB020]/60 bg-[#FFF7E8] px-4 py-3 text-sm text-[#8A5B00] shadow-sm transition-transform duration-200 hover:rotate-0">
-                      <span className="absolute -top-2.5 left-4 rounded-full bg-[#FFB020] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
-                        📌 Note from SkyXpress
-                      </span>
-                      <p className="mt-1.5 leading-snug">{trackingResult.admin_note}</p>
-                    </div>
+                    <StampNote note={trackingResult.admin_note} refCode={trackingResult.tracking_id} size="lg" />
                   </div>
                 )}
               </div>
@@ -526,6 +624,8 @@ export const TrackingSection = () => {
                         const eventStageIndex = getStageIndex(event.status);
                         const StageIcon = STAGES[eventStageIndex]?.icon || Clock;
                         const dotColor = isLatest ? TOKENS.orange : STAGE_COLORS[eventStageIndex];
+                        const eventNote =
+                          event.admin_note || event.staff_note || event.internal_note || event.remarks || event.comment;
 
                         return (
                           <div key={eventIndex} className="relative">
@@ -541,7 +641,7 @@ export const TrackingSection = () => {
                               </span>
                             </span>
 
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                               <p className="sx-mono text-xs font-medium text-[#5B6B82]">
                                 {new Date(event.timestamp).toLocaleString("en-US", {
                                   hour: "2-digit",
@@ -549,9 +649,20 @@ export const TrackingSection = () => {
                                   hour12: true,
                                 })}
                               </p>
-                              <p className="text-sm font-semibold text-[#0B2545]">
+
+                              {/* Status as a stage-coloured pill instead of plain text,
+                                  so the flight log reads at a glance like the gate chip above. */}
+                              <span
+                                className="sx-mono inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                                style={{
+                                  color: dotColor,
+                                  backgroundColor: `${dotColor}14`,
+                                  border: `1px solid ${dotColor}40`,
+                                }}
+                              >
                                 {formatStatusLabel(event.status || event.title || "Update")}
-                              </p>
+                              </span>
+
                               {isLatest && (
                                 <span className="sx-mono animate-pulse rounded-full bg-[#FF6A1A]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#FF6A1A] motion-reduce:animate-none">
                                   Latest
@@ -573,14 +684,9 @@ export const TrackingSection = () => {
                               </p>
                             )}
 
-                            {(event.admin_note || event.staff_note || event.internal_note || event.remarks || event.comment) && (
-                              <div className="sx-display relative mt-2 inline-block max-w-sm rotate-[-1.5deg] rounded-lg border border-dashed border-[#FFB020]/50 bg-[#FFF7E8] px-3 py-2 text-xs text-[#8A5B00] shadow-sm transition-transform duration-200 hover:rotate-0">
-                                <span className="absolute -top-2 left-3 rounded-full bg-[#FFB020] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
-                                  ✎ Admin note
-                                </span>
-                                <p className="mt-1.5 leading-snug">
-                                  {event.admin_note || event.staff_note || event.internal_note || event.remarks || event.comment}
-                                </p>
+                            {eventNote && (
+                              <div className="mt-2">
+                                <StampNote note={eventNote} refCode={`${trackingResult.tracking_id}-${eventIndex}`} size="sm" />
                               </div>
                             )}
                           </div>
