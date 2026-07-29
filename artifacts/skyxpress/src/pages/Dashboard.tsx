@@ -12,11 +12,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 
 // ─── Role resolution ────────────────────────────────────────────────────────
-// Maps both old role values (admin, staff, developer) and new ones
-// (super_admin, admin_partner) so the dashboard works with existing data.
-const resolveRole = (raw?: string | null): "super_admin" | "admin_partner" | "user" => {
+// super_admin  → full SuperAdminDashboard (all tabs always)
+// admin        → SuperAdminDashboard but Users tab only if can_manage_users=true
+// admin_partner/staff/developer → AdminPartnerDashboard
+// user         → UserDashboard
+const resolveRole = (raw?: string | null): "super_admin" | "admin" | "admin_partner" | "user" => {
   const r = (raw || "").toLowerCase();
-  if (r === "super_admin" || r === "admin") return "super_admin";
+  if (r === "super_admin") return "super_admin";
+  if (r === "admin") return "admin";
   if (r === "admin_partner" || r === "staff" || r === "developer") return "admin_partner";
   return "user";
 };
@@ -29,6 +32,14 @@ const ROLE_META = {
     headerClass: "bg-[#0a0e17]",
     accentColor: "#C98A2B",
     badgeClass: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+  },
+  admin: {
+    label: "Admin",
+    tagline: "Platform management — parcels, rates & team",
+    Icon: Shield,
+    headerClass: "bg-[#0a0e17]",
+    accentColor: "#8B5CF6",
+    badgeClass: "bg-violet-500/15 text-violet-300 border border-violet-500/30",
   },
   admin_partner: {
     label: "Admin Partner",
@@ -110,7 +121,10 @@ const Dashboard = () => {
   const role = resolveRole(profile?.role ?? undefined);
   const meta = ROLE_META[role];
   const { Icon } = meta;
-  const isPrivileged = role === "super_admin" || role === "admin_partner";
+  const isPrivileged = role === "super_admin" || role === "admin" || role === "admin_partner";
+  const isSuperAdmin = role === "super_admin";
+  // admin can see Users tab only if super_admin explicitly granted them access
+  const canManageUsers = isSuperAdmin || profile?.can_manage_users === true;
 
   return (
     <div className="min-h-screen bg-background">
@@ -219,8 +233,13 @@ const Dashboard = () => {
       {/* ─── Dashboard Body ─── */}
       <section className={`py-8 sm:py-10 md:py-12 ${isPrivileged ? "bg-[#0a0e17]" : "bg-muted/10"}`}>
         <div className="container mx-auto px-4">
-          {role === "super_admin" && (
-            <SuperAdminDashboard user={user} profile={profile} />
+          {(role === "super_admin" || role === "admin") && (
+            <SuperAdminDashboard
+              user={user}
+              profile={profile}
+              isSuperAdmin={isSuperAdmin}
+              canManageUsers={canManageUsers}
+            />
           )}
           {role === "admin_partner" && (
             <AdminPartnerDashboard user={user} profile={profile} />

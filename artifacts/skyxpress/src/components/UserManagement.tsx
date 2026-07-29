@@ -41,6 +41,7 @@ interface UserProfile {
   role: string;
   is_blocked: boolean;
   is_owner?: boolean;
+  can_manage_users?: boolean;
   created_at: string;
   email?: string;
 }
@@ -180,13 +181,17 @@ const FilterPill = ({
 const UserCard = ({
   user,
   isSelf,
+  isSuperAdmin,
   onRoleChange,
   onToggleBlock,
+  onToggleUserPermission,
 }: {
   user: UserProfile;
   isSelf: boolean;
+  isSuperAdmin: boolean;
   onRoleChange: (user: UserProfile, role: string) => void;
   onToggleBlock: (user: UserProfile) => void;
+  onToggleUserPermission: (user: UserProfile) => void;
 }) => {
   const isDev = isProtectedProfile(user);
   const cfg = getRoleCfg(user.role, isDev);
@@ -319,38 +324,70 @@ const UserCard = ({
               <Lock className="h-3 w-3" /> Protected
             </span>
           ) : (
-            <div className="flex items-center gap-2">
-              <Select
-                value={user.role}
-                onValueChange={(r) => onRoleChange(user, r)}
-                disabled={isSelf}
-              >
-                <SelectTrigger className="h-7 w-20 rounded-lg border-white/10 bg-white/6 text-xs text-white focus:ring-1 focus:ring-white/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-[#141922] text-white">
-                  <SelectItem value="user" className="text-xs focus:bg-white/10">User</SelectItem>
-                  <SelectItem value="staff" className="text-xs focus:bg-white/10">Staff</SelectItem>
-                  <SelectItem value="admin" className="text-xs focus:bg-white/10">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-center gap-2">
+                <Select
+                  value={user.role}
+                  onValueChange={(r) => onRoleChange(user, r)}
+                  disabled={isSelf}
+                >
+                  <SelectTrigger className="h-7 flex-1 rounded-lg border-white/10 bg-white/6 text-xs text-white focus:ring-1 focus:ring-white/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#141922] text-white">
+                    <SelectItem value="user"  className="text-xs focus:bg-white/10">User</SelectItem>
+                    <SelectItem value="staff" className="text-xs focus:bg-white/10">Staff</SelectItem>
+                    <SelectItem value="admin" className="text-xs focus:bg-white/10">Admin</SelectItem>
+                    {isSuperAdmin && (
+                      <SelectItem value="super_admin" className="text-xs focus:bg-white/10 text-amber-300">
+                        Super Admin
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
 
-              <button
-                onClick={() => onToggleBlock(user)}
-                disabled={isSelf && !user.is_blocked}
-                title={user.is_blocked ? "Unblock user" : "Block user"}
-                className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 ${
-                  user.is_blocked
-                    ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                    : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                }`}
-              >
-                {user.is_blocked ? (
-                  <UserCheck className="h-3.5 w-3.5" />
-                ) : (
-                  <Ban className="h-3.5 w-3.5" />
-                )}
-              </button>
+                <button
+                  onClick={() => onToggleBlock(user)}
+                  disabled={isSelf && !user.is_blocked}
+                  title={user.is_blocked ? "Unblock user" : "Block user"}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 ${
+                    user.is_blocked
+                      ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                      : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  }`}
+                >
+                  {user.is_blocked ? (
+                    <UserCheck className="h-3.5 w-3.5" />
+                  ) : (
+                    <Ban className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+
+              {/* can_manage_users toggle — super_admin only, shown for admin-role accounts */}
+              {isSuperAdmin && user.role === "admin" && (
+                <button
+                  onClick={() => onToggleUserPermission(user)}
+                  title={user.can_manage_users ? "Revoke user page access" : "Grant user page access"}
+                  className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs transition-all duration-150 ${
+                    user.can_manage_users
+                      ? "border-violet-500/30 bg-violet-500/15 text-violet-300 hover:bg-violet-500/25"
+                      : "border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:bg-white/10 hover:text-white/70"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3 w-3" />
+                    Can manage users
+                  </span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                    user.can_manage_users
+                      ? "bg-violet-500/30 text-violet-200"
+                      : "bg-white/10 text-white/30"
+                  }`}>
+                    {user.can_manage_users ? "ON" : "OFF"}
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -385,7 +422,7 @@ const CardSkeleton = () => (
 /* ─── main component ──────────────────────────────────────── */
 type RoleFilter = "all" | "super_admin" | "admin" | "staff" | "user";
 
-export const UserManagement = () => {
+export const UserManagement = ({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
@@ -443,6 +480,18 @@ export const UserManagement = () => {
     if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
     setUsers((prev) => prev.map((u) => (u.user_id === user.user_id ? { ...u, is_blocked: !u.is_blocked } : u)));
     toast({ title: user.is_blocked ? "User unblocked" : "User blocked", description: user.full_name });
+  };
+
+  const toggleUserPermission = async (user: UserProfile) => {
+    if (isProtectedProfile(user)) return toastProtected();
+    const newVal = !user.can_manage_users;
+    const { error } = await supabase.from("profiles").update({ can_manage_users: newVal }).eq("user_id", user.user_id);
+    if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
+    setUsers((prev) => prev.map((u) => (u.user_id === user.user_id ? { ...u, can_manage_users: newVal } : u)));
+    toast({
+      title: newVal ? "User page access granted" : "User page access revoked",
+      description: `${user.full_name} ${newVal ? "can now manage users" : "can no longer manage users"}`,
+    });
   };
 
   const toastProtected = () =>
@@ -512,11 +561,12 @@ export const UserManagement = () => {
         </div>
 
         {/* ── Stat tiles ── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Total Users" value={counts.all} icon={Users} color="#a855f7" />
-          <StatTile label="Admins" value={counts.admin} icon={ShieldCheck} color="#e879f9" />
-          <StatTile label="Staff" value={counts.staff} icon={Briefcase} color="#38bdf8" />
-          <StatTile label="Blocked" value={counts.blocked} icon={Ban} color="#f87171" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+          <StatTile label="Total Users"  value={counts.all}         icon={Users}      color="#a855f7" />
+          <StatTile label="Super Admins" value={counts.super_admin} icon={Shield}      color="#f59e0b" />
+          <StatTile label="Admins"       value={counts.admin}       icon={ShieldCheck} color="#e879f9" />
+          <StatTile label="Staff"        value={counts.staff}       icon={Briefcase}   color="#38bdf8" />
+          <StatTile label="Blocked"      value={counts.blocked}     icon={Ban}         color="#f87171" />
         </div>
 
         {/* ── Search + filter bar ── */}
@@ -565,8 +615,10 @@ export const UserManagement = () => {
                 key={user.user_id}
                 user={user}
                 isSelf={currentUser?.id === user.user_id}
+                isSuperAdmin={isSuperAdmin}
                 onRoleChange={updateUserRole}
                 onToggleBlock={toggleUserBlock}
+                onToggleUserPermission={toggleUserPermission}
               />
             ))}
           </div>

@@ -26,6 +26,8 @@ import {
 interface SuperAdminDashboardProps {
   user: any;
   profile: any;
+  isSuperAdmin?: boolean;
+  canManageUsers?: boolean;
 }
 
 const STATUS_HEX: Record<string, string> = {
@@ -87,7 +89,7 @@ const StatCard = ({
   </motion.div>
 );
 
-export const SuperAdminDashboard = ({ user, profile }: SuperAdminDashboardProps) => {
+export const SuperAdminDashboard = ({ user, profile, isSuperAdmin = true, canManageUsers = true }: SuperAdminDashboardProps) => {
   const [activeTab, setActiveTab] = useState("overview");
 
   const { data: users } = useLiveData<any>({
@@ -157,7 +159,7 @@ export const SuperAdminDashboard = ({ user, profile }: SuperAdminDashboardProps)
               { value: "partners", label: "Partners", icon: Building2 },
               { value: "requests", label: "Requests", icon: Clock },
               { value: "approved", label: "Approved", icon: CheckCircle2 },
-              { value: "users", label: "Users", icon: Users },
+              ...(canManageUsers ? [{ value: "users", label: "Users", icon: Users }] : []),
               { value: "parcels", label: "All Parcels", icon: Package },
               { value: "rates", label: "Rates", icon: DollarSign },
               { value: "system", label: "System", icon: Settings },
@@ -284,9 +286,11 @@ export const SuperAdminDashboard = ({ user, profile }: SuperAdminDashboardProps)
         <TabsContent value="approved">
           <ApprovedParcelsSection />
         </TabsContent>
-        <TabsContent value="users">
-          <UserManagement />
-        </TabsContent>
+        {canManageUsers && (
+          <TabsContent value="users">
+            <UserManagement isSuperAdmin={isSuperAdmin} />
+          </TabsContent>
+        )}
         <TabsContent value="parcels">
           <ParcelManagement />
         </TabsContent>
