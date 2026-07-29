@@ -1,5 +1,6 @@
 {
-  "buildCommand": "pnpm run build",
+  "framework": null,
+  "buildCommand": "pnpm --filter @workspace/skyxpress run build",
   "outputDirectory": "artifacts/skyxpress/dist/public",
   "rewrites": [
     {
