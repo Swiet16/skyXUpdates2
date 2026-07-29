@@ -28,6 +28,7 @@ import {
   Phone,
   Building2,
   Calendar,
+  ShieldAlert,
 } from "lucide-react";
 
 /* ─── types ──────────────────────────────────────────────── */
@@ -47,10 +48,20 @@ interface UserProfile {
 /* ─── protected account ──────────────────────────────────── */
 const PROTECTED_EMAIL = "myne7x@gmail.com";
 const isProtectedProfile = (u: UserProfile) =>
-  u.is_owner === true || u.email?.toLowerCase() === PROTECTED_EMAIL;
+  u.is_owner === true ||
+  u.email?.toLowerCase() === PROTECTED_EMAIL ||
+  u.role === "super_admin";
 
 /* ─── role config ────────────────────────────────────────── */
 const ROLE_CFG = {
+  super_admin: {
+    label: "Super Admin",
+    icon: Shield,
+    ring: "from-amber-400 via-orange-400 to-yellow-500",
+    badge: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+    avatar: "from-amber-500 to-orange-500",
+    glow: "shadow-[0_0_20px_rgba(245,158,11,0.45)]",
+  },
   admin: {
     label: "Admin",
     icon: ShieldCheck,
@@ -86,7 +97,8 @@ const ROLE_CFG = {
 } as const;
 
 const getRoleCfg = (role: string, isDev: boolean) => {
-  if (isDev) return ROLE_CFG.developer;
+  // Protected developer/owner accounts use the dev look; super_admin gets its own config
+  if (isDev && role !== "super_admin") return ROLE_CFG.developer;
   return ROLE_CFG[role as keyof typeof ROLE_CFG] || ROLE_CFG.user;
 };
 
@@ -233,8 +245,11 @@ const UserCard = ({
               <span className="truncate font-semibold text-white">
                 {user.full_name || "Unknown"}
               </span>
-              {isDev && (
+              {isDev && user.role !== "super_admin" && (
                 <Crown className="h-3.5 w-3.5 shrink-0 text-amber-400" style={{ animation: "crownFloat 2.2s ease-in-out infinite" }} />
+              )}
+              {user.role === "super_admin" && (
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-400" />
               )}
               {isSelf && (
                 <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/50">
@@ -250,10 +265,10 @@ const UserCard = ({
           {/* Role badge */}
           <div
             className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${cfg.badge}`}
-            style={isDev ? { animation: "devGlow 2.4s ease-in-out infinite" } : undefined}
+            style={isDev && user.role !== "super_admin" ? { animation: "devGlow 2.4s ease-in-out infinite" } : undefined}
           >
             <RoleIcon className="h-3 w-3" />
-            {isDev ? "Dev" : cfg.label}
+            {isDev && user.role !== "super_admin" ? "Dev" : cfg.label}
             {isDev && <Lock className="h-2.5 w-2.5 opacity-70" />}
           </div>
         </div>
@@ -368,7 +383,7 @@ const CardSkeleton = () => (
 );
 
 /* ─── main component ──────────────────────────────────────── */
-type RoleFilter = "all" | "admin" | "staff" | "user";
+type RoleFilter = "all" | "super_admin" | "admin" | "staff" | "user";
 
 export const UserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -436,7 +451,8 @@ export const UserManagement = () => {
   /* derived */
   const counts = useMemo(() => ({
     all: users.length,
-    admin: users.filter((u) => u.role === "admin" && !isProtectedProfile(u)).length,
+    super_admin: users.filter((u) => u.role === "super_admin").length,
+    admin: users.filter((u) => u.role === "admin").length,
     staff: users.filter((u) => u.role === "staff").length,
     user: users.filter((u) => u.role === "user").length,
     blocked: users.filter((u) => u.is_blocked).length,
@@ -516,13 +532,17 @@ export const UserManagement = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {(["all", "admin", "staff", "user"] as RoleFilter[]).map((r) => (
+            {(["all", "super_admin", "admin", "staff", "user"] as RoleFilter[]).map((r) => (
               <FilterPill
                 key={r}
-                label={r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1)}
+                label={
+                  r === "all" ? "All" :
+                  r === "super_admin" ? "Super Admin" :
+                  r.charAt(0).toUpperCase() + r.slice(1)
+                }
                 active={roleFilter === r}
                 onClick={() => setRoleFilter(r)}
-                count={r === "all" ? counts.all : counts[r as keyof typeof counts] as number}
+                count={r === "all" ? counts.all : (counts[r as keyof typeof counts] as number) || 0}
               />
             ))}
           </div>
