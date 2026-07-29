@@ -1,63 +1,55 @@
 # SkyXpress International Courier & Cargo
 
-A full-featured logistics web app for SkyXpress International — handling parcel management, shipment tracking, customer quotes, partner dashboards, and a super-admin control panel.
-
-## Run & Operate
-
-- Workflow `artifacts/skyxpress: web` starts the dev server automatically
-- `pnpm --filter @workspace/skyxpress run dev` — run the frontend manually (port 20181)
-- `pnpm run typecheck` — full typecheck across all packages
-- Required env vars (set as Replit Secrets): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+A full-stack courier/cargo management platform for SkyXpress International.
 
 ## Stack
 
-- pnpm workspaces, Node.js 20, TypeScript 5.9
-- Frontend: React 19 + Vite 7 + Tailwind CSS v4 + shadcn/ui
-- Auth & DB: Supabase (PostgreSQL with Row-Level Security)
-- Animation: Framer Motion
-- Charts: Recharts
-- Forms: react-hook-form + zod
-- PDF/AWB: jsPDF + html2canvas + bwip-js (barcode generation)
-- Routing: React Router DOM v6
+- **Frontend:** React + Vite + TypeScript (`artifacts/skyxpress`)
+- **Backend:** Express API server (`artifacts/api-server`)
+- **Database:** Supabase (PostgreSQL + Auth + RLS)
+- **UI:** Tailwind CSS + shadcn/ui components
 
-## Where things live
+## Running the app
 
-- `artifacts/skyxpress/src/pages/` — top-level route pages (Index, Auth, Dashboard, Track, etc.)
-- `artifacts/skyxpress/src/components/` — all UI components including role-based dashboards
-- `artifacts/skyxpress/src/integrations/supabase/` — Supabase client + generated TypeScript types
-- `artifacts/skyxpress/supabase-schema.sql` — full Supabase SQL schema with RLS policies
-- `artifacts/skyxpress/src/hooks/` — custom hooks (useTheme, useLiveData, use-toast)
+The main app runs via the **`artifacts/skyxpress: web`** workflow:
+```
+pnpm --filter @workspace/skyxpress run dev
+```
+It binds to `PORT=20181`.
 
-## Role-Based Dashboards
+To install / reinstall dependencies:
+```
+pnpm install
+```
 
-Three dashboard modes are rendered at `/dashboard` based on the authenticated user's role:
+## Environment variables required
 
-| Role | Component | Access |
-|------|-----------|--------|
-| `super_admin` | `SuperAdminDashboard.tsx` | All partners, parcels, users, analytics |
-| `admin_partner` | `AdminPartnerDashboard.tsx` | Own parcels, customers, invoices, earnings |
-| `user` | `UserDashboard.tsx` | Own shipments, tracking, requests |
+Set these as Replit Secrets before the app can connect to live data:
 
-Old role values (`admin`, `staff`, `developer`) are mapped to new roles via `resolveRole()` in `Dashboard.tsx`.
+| Secret | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Your Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
 
-## Architecture decisions
+Until these are set the app runs in placeholder mode (no data).
 
-- **Client-only Vite app** — no SSR; all data fetched client-side via Supabase JS SDK
-- **Supabase RLS** — row-level security enforced at the DB layer; partner data isolation is guaranteed even if frontend logic has bugs
-- **`VITE_SUPABASE_ANON_KEY` is a public key** — safe to expose; access is controlled by RLS policies
-- **PDF features use real packages** — jsPDF, html2canvas, and bwip-js are installed; the legacy stubs have been removed
+## Database schema
+
+`artifacts/skyxpress/supabase-schema.sql` — run in the Supabase SQL editor to create all tables, RLS policies, and seed data.
+
+**Important:** `partner_id` must be added to `profiles` before RLS policies that reference it are created. `attached_assets/partners-schema-fixed.sql` contains the corrected ordering for the partners + pricing_config migration.
+
+## Roles
+
+| Role | Access |
+|---|---|
+| `super_admin` | Full access to everything |
+| `admin_partner` | Own partner's data only |
+| `user` | Own parcels / requests |
+
+After running the schema, promote the first super admin:
+```sql
+UPDATE public.profiles SET role = 'super_admin' WHERE id = '<your-uid>';
+```
 
 ## User preferences
-
-_Populate as needed._
-
-## Gotchas
-
-- `pnpm dev` at workspace root has no `dev` script — always use the workflow or `pnpm --filter @workspace/skyxpress run dev`
-- After Supabase schema changes, regenerate types with the Supabase CLI and update `src/integrations/supabase/types.ts`
-- The `.migration-backup/` directory is the original Vercel import — do not modify it
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure and TypeScript setup
-- Supabase schema: `artifacts/skyxpress/supabase-schema.sql`
