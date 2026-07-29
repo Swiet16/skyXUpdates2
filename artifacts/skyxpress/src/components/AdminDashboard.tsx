@@ -101,8 +101,13 @@ export const AdminDashboard = ({ user, profile, canManageUsers = false }: AdminD
   const [activeTab, setActiveTab] = useState("overview");
 
   /* ─── live data ──────────────────────────────────────────────────────── */
+  // Admins only see their own parcels everywhere in this dashboard.
+  // Super-admins use SuperAdminDashboard which has no filter.
   const { data: parcels } = useLiveData<any>({
     table: "parcels",
+    filter: profile?.user_id
+      ? { column: "created_by", value: profile.user_id }
+      : undefined,
     orderBy: { column: "created_at", ascending: false },
   });
   const { data: invoices } = useLiveData<any>({
@@ -294,7 +299,7 @@ export const AdminDashboard = ({ user, profile, canManageUsers = false }: AdminD
             <CardHeader>
               <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-[#8B5CF6]" />
-                Recent Parcels (system-wide)
+                Recent Parcels (yours)
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -353,17 +358,17 @@ export const AdminDashboard = ({ user, profile, canManageUsers = false }: AdminD
           </motion.div>
         </TabsContent>
 
-        {/* ── Requests ── */}
+        {/* ── Requests — admin sees only their own pending requests ── */}
         <TabsContent value="requests">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <AdminRequestsSection />
+            <AdminRequestsSection filterByUserId={profile?.user_id} />
           </motion.div>
         </TabsContent>
 
-        {/* ── Approved ── */}
+        {/* ── Approved — admin sees only approved parcels they created ── */}
         <TabsContent value="approved">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <ApprovedParcelsSection />
+            <ApprovedParcelsSection filterByUserId={profile?.user_id} />
           </motion.div>
         </TabsContent>
 

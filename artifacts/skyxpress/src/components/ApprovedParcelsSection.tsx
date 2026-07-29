@@ -87,7 +87,12 @@ const WORLD_COUNTRIES = [
   "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
 ];
 
-export const ApprovedParcelsSection = () => {
+interface ApprovedParcelsSectionProps {
+  /** When provided, only approved parcels created by this user are shown. */
+  filterByUserId?: string;
+}
+
+export const ApprovedParcelsSection = ({ filterByUserId }: ApprovedParcelsSectionProps = {}) => {
   const PAGE_SIZE = 10;
   const [parcels, setParcels] = useState<ApprovedParcel[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,16 +120,17 @@ export const ApprovedParcelsSection = () => {
   useEffect(() => {
     fetchApprovedParcels();
 
-    // Real-time subscription
+    // Use a unique channel name per mount to avoid double-subscribe errors
+    const channelName = `approved_parcels_changes_${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('approved_parcels_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'parcels',
-          filter: 'request_status=eq.approved'
+          filter: 'request_status=eq.approved',
         },
         () => {
           fetchApprovedParcels();
@@ -135,16 +141,23 @@ export const ApprovedParcelsSection = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [filterByUserId]);
 
   const fetchApprovedParcels = async () => {
     try {
       // @ts-ignore -- request_status/approved_at are runtime columns not in generated types
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from('parcels')
         .select('*')
         .eq('request_status', 'approved')
         .order('approved_at', { ascending: false });
+
+      // Admins only see approved parcels they created; super-admins omit this prop.
+      if (filterByUserId) {
+        query = query.eq('created_by', filterByUserId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setParcels((data as any) || []);

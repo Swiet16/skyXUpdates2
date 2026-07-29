@@ -27,7 +27,12 @@ interface ParcelRequest {
   created_by: string;
 }
 
-export const AdminRequestsSection = () => {
+interface AdminRequestsSectionProps {
+  /** When provided, only pending requests created by this user are shown. */
+  filterByUserId?: string;
+}
+
+export const AdminRequestsSection = ({ filterByUserId }: AdminRequestsSectionProps = {}) => {
   const [requests, setRequests] = useState<ParcelRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,16 +46,17 @@ export const AdminRequestsSection = () => {
   useEffect(() => {
     fetchRequests();
 
-    // Real-time subscription
+    // Use a unique channel name per mount to avoid double-subscribe errors
+    const channelName = `parcel_requests_changes_${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('parcel_requests_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'parcels',
-          filter: 'request_status=eq.pending'
+          filter: 'request_status=eq.pending',
         },
         () => {
           fetchRequests();
@@ -61,16 +67,23 @@ export const AdminRequestsSection = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [filterByUserId]);
 
   const fetchRequests = async () => {
     try {
       // @ts-ignore -- request_status is a runtime column not in generated types
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from('parcels')
         .select('*')
         .eq('request_status', 'pending')
         .order('created_at', { ascending: false });
+
+      // Admins only see requests they created; super-admins omit this prop.
+      if (filterByUserId) {
+        query = query.eq('created_by', filterByUserId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setRequests((data as any) || []);

@@ -46,16 +46,18 @@ export const InvoiceManager = () => {
 
   useEffect(() => {
     fetchInvoices();
-    
-    // Set up real-time subscription
+
+    // Use a unique channel name per mount to avoid "already subscribed" errors
+    // when React Strict Mode or fast-refresh mounts the component twice.
+    const channelName = `invoices_changes_${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('invoices_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'invoices'
+          table: 'invoices',
         },
         () => {
           fetchInvoices();
