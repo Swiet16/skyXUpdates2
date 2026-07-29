@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/email-forge/"
+title = "emailForge Dashboard"
+version = "1.0.0"
+id = "artifacts/email-forge"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/email-forge/" ]
+localPort = 25697
+
+[services.development]
+run = "pnpm --filter @workspace/email-forge run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/email-forge", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/email-forge/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25697"
+BASE_PATH = "/email-forge/"
