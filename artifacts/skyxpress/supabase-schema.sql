@@ -291,6 +291,32 @@ END $$;
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================================
 
+-- ---- PROFILES ----
+-- (Supabase usually enables RLS on profiles by default; these policies
+--  ensure super_admin can read/update all rows, while regular users
+--  can only access their own.)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users_view_own_profile" ON public.profiles
+  FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "users_update_own_profile" ON public.profiles
+  FOR UPDATE TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+-- Super admin / admin can see ALL profiles (fixes User Management showing only 1 user)
+CREATE POLICY "super_admin_read_all_profiles" ON public.profiles
+  FOR SELECT TO authenticated
+  USING (public.get_user_role() IN ('super_admin', 'admin'));
+
+-- Super admin / admin can update ANY profile (role changes, blocking)
+CREATE POLICY "super_admin_update_all_profiles" ON public.profiles
+  FOR UPDATE TO authenticated
+  USING (public.get_user_role() IN ('super_admin', 'admin'))
+  WITH CHECK (public.get_user_role() IN ('super_admin', 'admin'));
+
 ALTER TABLE public.partners              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.offices               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers             ENABLE ROW LEVEL SECURITY;
