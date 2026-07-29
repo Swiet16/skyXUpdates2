@@ -338,18 +338,18 @@ export const AdminDashboard = ({ user, profile, canManageUsers = false }: AdminD
           </Card>
         </TabsContent>
 
-        {/* ── Parcels — admin can CREATE, and sees who created each parcel ── */}
+        {/* ── Parcels — admin sees only their own created parcels ── */}
         <TabsContent value="parcels">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             {/* Info callout */}
             <div className="mb-4 flex items-start gap-2 rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3">
               <ShieldCheck className="h-4 w-4 text-violet-400 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-violet-300">
-                As an <strong>Admin</strong> you can create new parcels and view all shipments in the system.
-                The <strong>Created By</strong> column shows which user and role created each record.
+                As an <strong>Admin</strong> you can create new parcels and view the shipments you have created.
+                Only the <strong>Super Admin</strong> can see parcels across all admins.
               </p>
             </div>
-            <ParcelManagement showCreator userProfile={profile} />
+            <ParcelManagement userProfile={profile} filterByUserId={profile?.user_id} />
           </motion.div>
         </TabsContent>
 

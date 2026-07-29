@@ -101,8 +101,15 @@ const statusColors: Record<string, string> = {
 interface ParcelManagementProps {
   /** When true, adds a "Created By" column showing creator name + role badge */
   showCreator?: boolean;
-  /** The current user's profile — used for context (not for filtering) */
+  /** The current user's profile — used for context */
   userProfile?: any;
+  /**
+   * When provided, the parcel list is filtered to only show parcels whose
+   * created_by matches this user_id.  Pass the current admin's user_id so
+   * regular admins only see their own parcels.  Super-admins omit this prop
+   * to see every parcel.
+   */
+  filterByUserId?: string;
 }
 
 const ROLE_BADGE: Record<string, string> = {
@@ -114,7 +121,7 @@ const ROLE_BADGE: Record<string, string> = {
   user:        "bg-slate-500/20 text-slate-300 border-slate-500/30",
 };
 
-export const ParcelManagement = ({ showCreator = false, userProfile }: ParcelManagementProps = {}) => {
+export const ParcelManagement = ({ showCreator = false, userProfile, filterByUserId }: ParcelManagementProps = {}) => {
   const PAGE_SIZE = 10;
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,14 +158,21 @@ export const ParcelManagement = ({ showCreator = false, userProfile }: ParcelMan
   useEffect(() => {
     fetchParcels();
     fetchCountries();
-  }, []);
+  }, [filterByUserId]);
 
   const fetchParcels = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("parcels")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // Regular admins only see their own parcels; super-admins see everything.
+      if (filterByUserId) {
+        query = query.eq("created_by", filterByUserId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       const rows = data || [];
       setParcels(rows);
