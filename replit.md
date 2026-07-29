@@ -1,45 +1,63 @@
-# [Project name]
+# SkyXpress International Courier & Cargo
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A full-featured logistics web app for SkyXpress International — handling parcel management, shipment tracking, customer quotes, partner dashboards, and a super-admin control panel.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- Workflow `artifacts/skyxpress: web` starts the dev server automatically
+- `pnpm --filter @workspace/skyxpress run dev` — run the frontend manually (port 20181)
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env vars (set as Replit Secrets): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js 20, TypeScript 5.9
+- Frontend: React 19 + Vite 7 + Tailwind CSS v4 + shadcn/ui
+- Auth & DB: Supabase (PostgreSQL with Row-Level Security)
+- Animation: Framer Motion
+- Charts: Recharts
+- Forms: react-hook-form + zod
+- PDF/AWB: jsPDF + html2canvas + bwip-js (barcode generation)
+- Routing: React Router DOM v6
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/skyxpress/src/pages/` — top-level route pages (Index, Auth, Dashboard, Track, etc.)
+- `artifacts/skyxpress/src/components/` — all UI components including role-based dashboards
+- `artifacts/skyxpress/src/integrations/supabase/` — Supabase client + generated TypeScript types
+- `artifacts/skyxpress/supabase-schema.sql` — full Supabase SQL schema with RLS policies
+- `artifacts/skyxpress/src/hooks/` — custom hooks (useTheme, useLiveData, use-toast)
+
+## Role-Based Dashboards
+
+Three dashboard modes are rendered at `/dashboard` based on the authenticated user's role:
+
+| Role | Component | Access |
+|------|-----------|--------|
+| `super_admin` | `SuperAdminDashboard.tsx` | All partners, parcels, users, analytics |
+| `admin_partner` | `AdminPartnerDashboard.tsx` | Own parcels, customers, invoices, earnings |
+| `user` | `UserDashboard.tsx` | Own shipments, tracking, requests |
+
+Old role values (`admin`, `staff`, `developer`) are mapped to new roles via `resolveRole()` in `Dashboard.tsx`.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Client-only Vite app** — no SSR; all data fetched client-side via Supabase JS SDK
+- **Supabase RLS** — row-level security enforced at the DB layer; partner data isolation is guaranteed even if frontend logic has bugs
+- **`VITE_SUPABASE_ANON_KEY` is a public key** — safe to expose; access is controlled by RLS policies
+- **PDF features use real packages** — jsPDF, html2canvas, and bwip-js are installed; the legacy stubs have been removed
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+_Populate as needed._
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `pnpm dev` at workspace root has no `dev` script — always use the workflow or `pnpm --filter @workspace/skyxpress run dev`
+- After Supabase schema changes, regenerate types with the Supabase CLI and update `src/integrations/supabase/types.ts`
+- The `.migration-backup/` directory is the original Vercel import — do not modify it
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See the `pnpm-workspace` skill for workspace structure and TypeScript setup
+- Supabase schema: `artifacts/skyxpress/supabase-schema.sql`

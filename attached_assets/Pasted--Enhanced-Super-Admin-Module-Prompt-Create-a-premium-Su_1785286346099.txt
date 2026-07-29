@@ -1,0 +1,233 @@
+# Enhanced Super Admin Module Prompt
+
+Create a premium **Super Admin Dashboard** with a modern SaaS design using glassmorphism, animated gradients, smooth transitions, Framer Motion, elegant data tables, beautiful charts, responsive layouts, and a unique professional UI.
+
+## Partner Management
+
+The Super Admin must be able to create unlimited **Partner (Admin)** accounts.
+
+Partner creation form should include:
+
+* Full Name
+* Company / Office Name
+* Email Address
+* Mobile Number
+* Office Address
+* City
+* Country
+* Office Logo
+* Status (Active / Suspended)
+* Commission (Optional)
+* Notes
+
+After creating a Partner, automatically create their login account.
+
+The Super Admin can:
+
+* Generate a temporary password automatically.
+* Set a custom password manually.
+* Reset the partner's password at any time.
+* Disable or enable login.
+* Suspend or reactivate the account.
+* Delete the partner (optional with confirmation).
+
+If a temporary password is assigned, the Partner must be required to **set a new password on their first login** before accessing the dashboard.
+
+---
+
+# User Role Management
+
+The Super Admin can manage every registered user.
+
+Features:
+
+* View all registered users.
+* Search users.
+* Filter by role.
+* Filter by office.
+* Filter by status.
+* Change user roles instantly.
+
+Available roles:
+
+* Super Admin
+* Admin Partner
+* User
+
+The Super Admin can promote any existing user to an **Admin Partner**.
+
+When promoting a user, assign:
+
+* Partner Name
+* Office
+* Office Code
+* Permissions
+* Status
+
+Once promoted, the user immediately gains access to the Partner Dashboard.
+
+The Super Admin can also demote an Admin Partner back to a normal User at any time.
+
+---
+
+# Partner Dashboard Access
+
+Each Partner should have their own secure dashboard.
+
+Partners can only view:
+
+* Their own parcels.
+* Their own customers.
+* Their own invoices.
+* Their own bills.
+* Their own expenses.
+* Their own reports.
+* Their own earnings.
+* Their own activity logs.
+
+Partners must never be able to view:
+
+* Other partners' data.
+* Super Admin pages.
+* System settings.
+* Global users.
+* Global reports.
+
+All data must be isolated using Supabase Row-Level Security (RLS).
+
+---
+
+# Login & Password Management
+
+The Super Admin should have complete account management.
+
+Features:
+
+* Create login credentials.
+* Reset passwords.
+* Force password change.
+* Lock accounts.
+* Unlock accounts.
+* Disable login.
+* Enable login.
+* View last login.
+* View login history.
+* Force logout from all devices.
+
+On first login, users with a temporary password must see a **"Set New Password"** page before accessing the dashboard.
+
+Password requirements:
+
+* Minimum 8 characters.
+* Uppercase letter.
+* Lowercase letter.
+* Number.
+* Special character.
+
+---
+
+# Parcel Ownership & Tracking
+
+Every parcel must permanently record:
+
+* Created By User
+* Created By Partner
+* Office Name
+* Office ID
+* Partner ID
+* Created Date & Time
+* Updated By
+* Updated Date & Time
+* Delivery Agent
+* Current Status
+* Full Status History
+
+Display stylish badges such as:
+
+* Created by Partner
+* Updated by Partner
+* Delivered by Partner
+* Cancelled by Partner
+
+Include a beautiful activity timeline showing every action performed on the parcel.
+
+---
+
+# Super Admin Controls
+
+The Super Admin can:
+
+* Create Partners.
+* Edit Partners.
+* Delete Partners.
+* Suspend Partners.
+* Activate Partners.
+* Reset Partner Passwords.
+* Change User Roles.
+* Assign Offices.
+* Assign Permissions.
+* View every parcel in the system.
+* Edit any parcel.
+* Delete any parcel.
+* Transfer parcels between partners.
+* View complete audit logs.
+* View system analytics.
+* Manage pricing and settings.
+* Manage notifications.
+* Manage reports.
+
+---
+
+# UI / UX Requirements
+
+Create a unique premium interface with:
+
+* Professional SaaS dashboard.
+* Glassmorphism cards.
+* Gradient borders.
+* Animated statistics.
+* Elegant tables.
+* Beautiful forms.
+* Modern modal windows.
+* Framer Motion page transitions.
+* Responsive mobile and desktop layouts.
+* Professional charts.
+* Timeline views.
+* Status badges.
+* Search with instant filtering.
+* Smooth loading skeletons.
+* Premium typography.
+* Clean spacing.
+* Dark & Light mode.
+* Unique dashboard layouts for Super Admin, Admin Partner, and User.
+
+The design should feel modern, polished, and enterprise-grade rather than using generic admin templates.
+
+---
+
+# Database & Security
+
+Generate the complete **Supabase SQL** for all required tables, relationships, triggers, functions, indexes, and **Row-Level Security (RLS)** policies.
+
+Include SQL for:
+
+* Users
+* Roles
+* Partners
+* Offices
+* Login Credentials
+* Password Reset
+* First Login Password Change
+* Parcels
+* Customers
+* Bills
+* Invoices
+* Expenses
+* Reports
+* Activity Logs
+* Audit Logs
+* Notifications
+* Role Permissions
+* System Settings
+
+Ensure the SQL is secure, production-ready, scalable, and optimized for Supabase.
