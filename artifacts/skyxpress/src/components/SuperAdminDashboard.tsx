@@ -14,6 +14,8 @@ import { useLiveData } from "@/hooks/useLiveData";
 import { UserManagement } from "./UserManagement";
 import { ParcelManagement } from "./ParcelManagement";
 import { PricingManager } from "./PricingManager";
+import { PartnerManagement } from "./PartnerManagement";
+import { PartnerRates } from "./PartnerRates";
 import { AdminRequestsSection } from "./AdminRequestsSection";
 import { ApprovedParcelsSection } from "./ApprovedParcelsSection";
 import {
@@ -268,64 +270,14 @@ export const SuperAdminDashboard = ({ user, profile }: SuperAdminDashboardProps)
           </div>
         </TabsContent>
 
-        {/* ─── PARTNERS ─── */}
+        {/* ─── PARTNERS — full management with temp passwords ─── */}
         <TabsContent value="partners" className="space-y-4">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-white/80 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#8B5CF6]" />
-                  Partner Offices ({stats.activePartners} active)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {partners.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <Building2 className="h-10 w-10 text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40 text-sm">No partner offices yet</p>
-                    <p className="text-white/25 text-xs mt-1">Partners are created after running the SQL schema</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {partners.map((partner: any, i: number) => {
-                      const partnerParcels = parcels.filter((p: any) => p.partner_id === partner.id);
-                      return (
-                        <motion.div
-                          key={partner.id}
-                          initial={{ opacity: 0, x: -16 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.05 }}
-                          className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center">
-                              <Building2 className="h-5 w-5 text-[#8B5CF6]" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-white text-sm">{partner.name}</p>
-                              <p className="text-xs text-white/40">{partner.office_name} · {partner.country}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4 text-right">
-                            <div>
-                              <p className="text-white text-sm font-bold">{partnerParcels.length}</p>
-                              <p className="text-white/40 text-[10px]">parcels</p>
-                            </div>
-                            <Badge className={partner.is_active !== false ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"}>
-                              {partner.is_active !== false ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PartnerManagement />
           </motion.div>
         </TabsContent>
 
-        {/* ─── OTHER TABS (reuse existing components) ─── */}
+        {/* ─── OTHER TABS ─── */}
         <TabsContent value="requests">
           <AdminRequestsSection />
         </TabsContent>
@@ -339,7 +291,10 @@ export const SuperAdminDashboard = ({ user, profile }: SuperAdminDashboardProps)
           <ParcelManagement />
         </TabsContent>
         <TabsContent value="rates">
-          <PricingManager />
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            {/* Super admin sees all partners' rates */}
+            <PartnerRates role="super_admin" />
+          </motion.div>
         </TabsContent>
         <TabsContent value="system">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>

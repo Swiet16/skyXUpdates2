@@ -13,6 +13,7 @@ import { ParcelManagement } from "./ParcelManagement";
 import { AdminRequestsSection } from "./AdminRequestsSection";
 import { ApprovedParcelsSection } from "./ApprovedParcelsSection";
 import { InvoiceManager } from "./InvoiceManager";
+import { PartnerRates } from "./PartnerRates";
 import {
   FlightPathChart, LedgerBars, lastNDays, bucketByDay, sumByDay, dayLabel,
 } from "./DashboardCharts";
@@ -131,6 +132,7 @@ export const AdminPartnerDashboard = ({ user, profile }: AdminPartnerDashboardPr
               { value: "invoices", label: "Invoices", icon: FileText },
               { value: "customers", label: "Customers", icon: Users },
               { value: "expenses", label: "Expenses", icon: DollarSign },
+              { value: "rates", label: "My Rates", icon: DollarSign },
             ].map(({ value, label, icon: Icon }) => (
               <TabsTrigger
                 key={value}
@@ -350,6 +352,13 @@ export const AdminPartnerDashboard = ({ user, profile }: AdminPartnerDashboardPr
                 )}
               </CardContent>
             </Card>
+          </motion.div>
+        </TabsContent>
+
+        {/* ─── RATES — partner can view & request edits to their own rates ─── */}
+        <TabsContent value="rates">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <PartnerRates role="admin_partner" partnerId={profile?.partner_id} />
           </motion.div>
         </TabsContent>
       </Tabs>
