@@ -1,8 +1,11 @@
 -- ============================================================
--- partners + pricing_config migration (safe to re-run)
+-- partners + pricing_config migration
+-- Safe to re-run on any state (fresh or partial previous run)
+-- Run this entire script in one go in the Supabase SQL editor.
 -- ============================================================
 
--- ─── STEP 1: set_updated_at helper (idempotent) ───────────────────────────────
+
+-- ─── set_updated_at helper ────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -12,7 +15,7 @@ END;
 $$;
 
 
--- ─── STEP 2: partners table ───────────────────────────────────────────────────
+-- ─── partners table ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.partners (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name            text NOT NULL,
@@ -30,23 +33,34 @@ CREATE TABLE IF NOT EXISTS public.partners (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- drop before recreate so this is safe on re-runs
 DROP TRIGGER IF EXISTS partners_updated_at ON public.partners;
 CREATE TRIGGER partners_updated_at
   BEFORE UPDATE ON public.partners
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
--- ─── STEP 3: add partner_id to profiles (partners now exists for the FK) ──────
--- partners table must already exist above before this FK can reference it
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS partner_id uuid REFERENCES public.partners(id) ON DELETE SET NULL;
+-- ─── add partner_id to profiles (each column in its own statement) ────────────
+-- Using DO blocks so each addition is independent: one failing won't block the rest.
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'profiles'
+      AND column_name  = 'partner_id'
+  ) THEN
+    ALTER TABLE public.profiles
+      ADD COLUMN partner_id uuid REFERENCES public.partners(id) ON DELETE SET NULL;
+  END IF;
+END
+$$;
 
 
--- ─── STEP 4: RLS on partners (profiles.partner_id now exists) ─────────────────
+-- ─── RLS on partners (profiles.partner_id now exists) ─────────────────────────
 ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "super_admin full access" ON public.partners;
+DROP POLICY IF EXISTS "super_admin full access"  ON public.partners;
 CREATE POLICY "super_admin full access" ON public.partners
   USING (
     EXISTS (
@@ -67,7 +81,7 @@ CREATE POLICY "admin_partner read own" ON public.partners
   );
 
 
--- ─── STEP 5: pricing_config table ────────────────────────────────────────────
+-- ─── pricing_config table ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.pricing_config (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id           uuid REFERENCES public.partners(id) ON DELETE CASCADE,
@@ -87,10 +101,10 @@ CREATE TRIGGER pricing_config_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
--- ─── STEP 6: RLS on pricing_config ───────────────────────────────────────────
+-- ─── RLS on pricing_config ────────────────────────────────────────────────────
 ALTER TABLE public.pricing_config ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "super_admin full access" ON public.pricing_config;
+DROP POLICY IF EXISTS "super_admin full access"        ON public.pricing_config;
 CREATE POLICY "super_admin full access" ON public.pricing_config
   USING (
     EXISTS (
@@ -100,7 +114,7 @@ CREATE POLICY "super_admin full access" ON public.pricing_config
     )
   );
 
-DROP POLICY IF EXISTS "admin_partner read own rates" ON public.pricing_config;
+DROP POLICY IF EXISTS "admin_partner read own rates"   ON public.pricing_config;
 CREATE POLICY "admin_partner read own rates" ON public.pricing_config
   FOR SELECT
   USING (
@@ -121,7 +135,7 @@ CREATE POLICY "admin_partner update own rates" ON public.pricing_config
   );
 
 
--- ─── STEP 7: seed global default rate row ────────────────────────────────────
+-- ─── seed global default rate row ────────────────────────────────────────────
 INSERT INTO public.pricing_config (partner_id)
 VALUES (NULL)
 ON CONFLICT (partner_id) DO NOTHING;
