@@ -49,7 +49,8 @@ const Auth = () => {
       }
       if (data.user) {
         // Check if this is a partner who still has a temp_password (first login)
-        const { data: partnerData } = await supabase
+        // partners table exists in DB but is not yet in generated types – cast to any
+        const { data: partnerData } = await (supabase as any)
           .from("partners")
           .select("id, temp_password")
           .eq("email", data.user.email)
@@ -89,7 +90,8 @@ const Auth = () => {
 
       // Clear temp_password so they won't be prompted again
       if (partnerId) {
-        await supabase
+        // partners table exists in DB but is not yet in generated types – cast to any
+        await (supabase as any)
           .from("partners")
           .update({ temp_password: null })
           .eq("id", partnerId);

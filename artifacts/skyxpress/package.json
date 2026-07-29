@@ -48,6 +48,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@supabase/supabase-js": "^2.49.4",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "^1.1.1",
@@ -71,10 +72,10 @@
     "vaul": "^1.1.2",
     "vite": "catalog:",
     "wouter": "^3.3.5",
-    "zod": "catalog:",
-    "@supabase/supabase-js": "^2.49.4",
+    "xlsx": "^0.18.5",
+    "exceljs": "^4.4.0",
     "motion": "^12.42.2",
     "react-router-dom": "^6.30.1",
-    "xlsx": "^0.18.5"
+    "zod": "catalog:"
   }
 }

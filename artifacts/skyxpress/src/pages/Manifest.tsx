@@ -32,6 +32,7 @@ import {
   ScanSearch,
   ArrowLeft,
 } from "lucide-react";
+// @ts-ignore – jspdf is aliased to a stub in vite.config.ts (blocked by package firewall)
 import jsPDF from "jspdf";
 import logoUrl from "@/assets/skyxpress_logo.png";
 

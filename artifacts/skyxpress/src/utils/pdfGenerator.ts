@@ -1,4 +1,6 @@
+// @ts-ignore – jspdf is aliased to a stub in vite.config.ts (blocked by package firewall)
 import { jsPDF } from 'jspdf';
+// @ts-ignore – html2canvas is aliased to a stub in vite.config.ts
 import html2canvas from 'html2canvas';
 
 interface InvoiceData {
