@@ -98,12 +98,30 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
-export const ParcelManagement = () => {
+interface ParcelManagementProps {
+  /** When true, adds a "Created By" column showing creator name + role badge */
+  showCreator?: boolean;
+  /** The current user's profile — used for context (not for filtering) */
+  userProfile?: any;
+}
+
+const ROLE_BADGE: Record<string, string> = {
+  super_admin: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+  admin:       "bg-violet-500/20 text-violet-300 border-violet-500/30",
+  admin_partner:"bg-sky-500/20 text-sky-300 border-sky-500/30",
+  staff:       "bg-teal-500/20 text-teal-300 border-teal-500/30",
+  partner:     "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  user:        "bg-slate-500/20 text-slate-300 border-slate-500/30",
+};
+
+export const ParcelManagement = ({ showCreator = false, userProfile }: ParcelManagementProps = {}) => {
   const PAGE_SIZE = 10;
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  // creator_id → { full_name, role }
+  const [creatorMap, setCreatorMap] = useState<Record<string, { full_name: string; role: string }>>({});
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -142,11 +160,40 @@ export const ParcelManagement = () => {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setParcels(data || []);
+      const rows = data || [];
+      setParcels(rows);
+      // Eagerly load creator names when the admin has the column enabled
+      if (showCreator) {
+        await fetchCreatorProfiles(rows);
+      }
     } catch (error: any) {
       toast({ title: "Error", description: "Failed to load parcels", variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Batch-fetch profile records for every unique created_by UUID in the parcel
+   * list.  We store them in a map so each table row can look up creator info
+   * without extra queries.
+   */
+  const fetchCreatorProfiles = async (parcelRows: any[]) => {
+    const ids = [...new Set(parcelRows.map((p) => p.created_by).filter(Boolean))];
+    if (ids.length === 0) return;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, role")
+        .in("user_id", ids);
+      if (!data) return;
+      const map: Record<string, { full_name: string; role: string }> = {};
+      data.forEach((p: any) => {
+        map[p.user_id] = { full_name: p.full_name || "Unknown", role: p.role || "user" };
+      });
+      setCreatorMap(map);
+    } catch {
+      // Non-fatal — creator column will just show "—"
     }
   };
 
@@ -446,6 +493,7 @@ export const ParcelManagement = () => {
                   <TableHead>Details</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
+                  {showCreator && <TableHead>Created By</TableHead>}
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -551,6 +599,28 @@ export const ParcelManagement = () => {
                           {parcel.current_status.replace(/_/g, " ").toUpperCase()}
                         </Badge>
                       </TableCell>
+
+                      {showCreator && (
+                        <TableCell>
+                          {parcel.created_by ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-medium text-foreground leading-tight">
+                                {creatorMap[parcel.created_by]?.full_name ?? "Loading…"}
+                              </span>
+                              <span
+                                className={`inline-flex items-center self-start rounded border px-1.5 py-0.5 text-[10px] font-semibold ${
+                                  ROLE_BADGE[creatorMap[parcel.created_by]?.role ?? ""] ||
+                                  ROLE_BADGE.user
+                                }`}
+                              >
+                                {creatorMap[parcel.created_by]?.role?.replace(/_/g, " ").toUpperCase() ?? "USER"}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
 
                       <TableCell>{new Date(parcel.created_at).toLocaleDateString()}</TableCell>
 

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { SuperAdminDashboard } from "@/components/SuperAdminDashboard";
+import { AdminDashboard } from "@/components/AdminDashboard";
 import { AdminPartnerDashboard } from "@/components/AdminPartnerDashboard";
 import { UserDashboard } from "@/components/UserDashboard";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,9 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 
 // ─── Role resolution ────────────────────────────────────────────────────────
-// super_admin  → full SuperAdminDashboard (all tabs always)
-// admin        → SuperAdminDashboard but Users tab only if can_manage_users=true
+// super_admin  → SuperAdminDashboard  (all data, all partners, full control)
+// admin        → AdminDashboard       (own dedicated dashboard, create parcels,
+//                                      Users tab only if can_manage_users=true)
 // admin_partner/staff/developer → AdminPartnerDashboard
 // user         → UserDashboard
 const resolveRole = (raw?: string | null): "super_admin" | "admin" | "admin_partner" | "user" => {
@@ -233,11 +235,18 @@ const Dashboard = () => {
       {/* ─── Dashboard Body ─── */}
       <section className={`py-8 sm:py-10 md:py-12 ${isPrivileged ? "bg-[#0a0e17]" : "bg-muted/10"}`}>
         <div className="container mx-auto px-4">
-          {(role === "super_admin" || role === "admin") && (
+          {role === "super_admin" && (
             <SuperAdminDashboard
               user={user}
               profile={profile}
-              isSuperAdmin={isSuperAdmin}
+              isSuperAdmin={true}
+              canManageUsers={true}
+            />
+          )}
+          {role === "admin" && (
+            <AdminDashboard
+              user={user}
+              profile={profile}
               canManageUsers={canManageUsers}
             />
           )}

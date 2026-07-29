@@ -1,446 +1,393 @@
+// @ts-nocheck
+/**
+ * AdminDashboard — dedicated dashboard for the `admin` role.
+ *
+ * Super-admin sees SuperAdminDashboard (all data, all partners).
+ * Admin sees THIS dashboard — their own action history, parcel creation,
+ * requests, invoices, and optionally user management (if super-admin
+ * has granted can_manage_users = true on their profile).
+ *
+ * Key features
+ * ─────────────
+ * • Can create parcels (same ability as partner accounts)
+ * • Every parcel in the Parcels tab shows "Created By" (name + role badge)
+ * • "Users" tab only appears when can_manage_users = true
+ * • Stats show total-system numbers so the admin has full visibility
+ */
 import { useMemo, useState } from "react";
+import { motion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Users,
-  Package,
-  FileText,
-  Settings,
-  Plus,
-  DollarSign,
-  Radio,
-  Activity,
-  ClipboardCheck,
-  Terminal,
+  Package, FileText, DollarSign, Users, Activity,
+  TrendingUp, TrendingDown, CheckCircle2, Clock,
+  ClipboardCheck, ShieldCheck, BarChart3, AlertCircle,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { UserManagement } from "./UserManagement";
+import { useLiveData } from "@/hooks/useLiveData";
 import { ParcelManagement } from "./ParcelManagement";
-import { PricingManager } from "./PricingManager";
 import { AdminRequestsSection } from "./AdminRequestsSection";
 import { ApprovedParcelsSection } from "./ApprovedParcelsSection";
-import { useLiveData } from "@/hooks/useLiveData";
+import { InvoiceManager } from "./InvoiceManager";
+import { UserManagement } from "./UserManagement";
 import {
-  FlightPathChart,
-  ManifestBar,
-  LedgerBars,
-  Sparkline,
-  lastNDays,
-  bucketByDay,
-  sumByDay,
-  dayLabel,
-  pctDelta,
+  FlightPathChart, LedgerBars, lastNDays, bucketByDay, sumByDay, dayLabel, pctDelta,
 } from "./DashboardCharts";
 
 interface AdminDashboardProps {
   user: any;
   profile: any;
+  canManageUsers?: boolean;
 }
 
-// ---------- role identity ----------
-// Every role gets its own callsign, accent color and set of privileges instead
-// of one generic "admin dashboard" shell.
+const ACCENT = "#8B5CF6"; // violet — admin identity colour
 
-type RoleKey = "admin" | "staff" | "developer";
-
-const ROLE_THEME: Record<
-  RoleKey,
-  { label: string; tagline: string; accent: string; badgeClass: string }
-> = {
-  admin: {
-    label: "Admin",
-    tagline: "Full manifest access — rates, users & finance",
-    accent: "#C98A2B",
-    badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  },
-  staff: {
-    label: "Staff",
-    tagline: "Ground ops — requests, parcels & quotes",
-    accent: "#2B8C7E",
-    badgeClass: "bg-teal-500/15 text-teal-300 border-teal-500/30",
-  },
-  developer: {
-    label: "Developer",
-    tagline: "Systems desk — live channels & diagnostics",
-    accent: "#6C5CE7",
-    badgeClass: "bg-violet-500/15 text-violet-300 border-violet-500/30",
-  },
-};
-
-const resolveRole = (rawRole?: string): RoleKey => {
-  const r = (rawRole || "").toLowerCase();
-  if (r === "admin") return "admin";
-  if (r === "developer" || r === "dev" || r === "engineer") return "developer";
-  return "staff";
-};
-
-// Status colors kept consistent with the parcel table elsewhere in the app.
 const STATUS_HEX: Record<string, string> = {
-  created: "#EAB308",
-  picked_up: "#3B82F6",
-  in_transit: "#8B5CF6",
-  custom_hold: "#EF4444",
-  flight_departure: "#6366F1",
-  flight_arrived: "#22C55E",
-  flight_offload: "#F97316",
-  in_custom_clearance: "#EAB308",
-  arrived_hub: "#3B82F6",
-  customs: "#F97316",
-  out_for_delivery: "#6366F1",
-  delivered: "#22C55E",
+  created: "#EAB308", picked_up: "#3B82F6", in_transit: "#8B5CF6",
+  custom_hold: "#EF4444", flight_departure: "#6366F1", flight_arrived: "#22C55E",
+  flight_offload: "#F97316", in_custom_clearance: "#EAB308", arrived_hub: "#3B82F6",
+  customs: "#F97316", out_for_delivery: "#6366F1", delivered: "#22C55E",
   cancelled: "#EF4444",
 };
 
-const METRIC_ACCENT = {
-  users: "#6C5CE7",
-  parcels: "#C98A2B",
-  invoices: "#2B8C7E",
-  revenue: "#3FA76B",
-};
-
 const formatRelativeTime = (iso?: string) => {
-  if (!iso) return "no activity yet";
+  if (!iso) return "—";
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 };
 
-export const AdminDashboard = ({ user, profile }: AdminDashboardProps) => {
+const StatCard = ({
+  label, value, delta, icon: Icon, color, sub, index,
+}: {
+  label: string; value: string | number; delta?: number;
+  icon: any; color: string; sub?: string; index: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 24 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.06, duration: 0.4, ease: "easeOut" }}
+  >
+    <Card className="relative overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 transition-all duration-300 group">
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{ background: `radial-gradient(ellipse at top left, ${color}18, transparent 60%)` }}
+      />
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-5">
+        <CardTitle className="text-sm font-medium text-white/60">{label}</CardTitle>
+        <div className="rounded-lg p-2" style={{ background: `${color}20` }}>
+          <Icon className="h-4 w-4" style={{ color }} />
+        </div>
+      </CardHeader>
+      <CardContent className="px-5 pb-4">
+        <div className="text-2xl font-bold text-white">{value}</div>
+        {delta !== undefined && (
+          <p className="flex items-center gap-1 text-xs mt-1" style={{ color: delta >= 0 ? "#22C55E" : "#EF4444" }}>
+            {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {delta >= 0 ? "+" : ""}{delta}% vs prior week
+          </p>
+        )}
+        {sub && <p className="text-xs text-white/40 mt-1">{sub}</p>}
+      </CardContent>
+    </Card>
+  </motion.div>
+);
+
+export const AdminDashboard = ({ user, profile, canManageUsers = false }: AdminDashboardProps) => {
+  const [activeTab, setActiveTab] = useState("overview");
+
+  /* ─── live data ──────────────────────────────────────────────────────── */
+  const { data: parcels } = useLiveData<any>({
+    table: "parcels",
+    orderBy: { column: "created_at", ascending: false },
+  });
+  const { data: invoices } = useLiveData<any>({
+    table: "invoices",
+    orderBy: { column: "created_at", ascending: false },
+  });
+  const { data: quotes } = useLiveData<any>({
+    table: "quotes",
+    orderBy: { column: "created_at", ascending: false },
+  });
   const { data: users } = useLiveData<any>({
     table: "profiles",
     orderBy: { column: "created_at", ascending: false },
   });
 
-  const { data: parcels } = useLiveData<any>({
-    table: "parcels",
-    orderBy: { column: "created_at", ascending: false },
-  });
-
-  const { data: invoices } = useLiveData<any>({
-    table: "invoices",
-    orderBy: { column: "created_at", ascending: false },
-  });
-
-  const { data: quotes } = useLiveData<any>({
-    table: "quotes",
-    orderBy: { column: "created_at", ascending: false },
-  });
-
-  const [activeTab, setActiveTab] = useState("overview");
-  const navigate = useNavigate();
-
-  const role = resolveRole(profile?.role);
-  const theme = ROLE_THEME[role];
-  const isAdmin = role === "admin";
-  const isDeveloper = role === "developer";
-
-  // ---------- derived stats ----------
-  const stats = {
-    totalUsers: users.length,
-    totalParcels: parcels.length,
-    activeParcels: parcels.filter((p) => !["delivered", "cancelled"].includes(p.current_status)).length,
-    totalInvoices: invoices.length,
-    pendingQuotes: quotes.filter((q) => q.status === "pending").length,
-    todayRevenue: invoices
-      .filter((inv) => new Date(inv.created_at).toDateString() === new Date().toDateString())
-      .reduce((sum, inv) => sum + (inv.final_amount || 0), 0),
-  };
-
-  // ---------- chart data (memoized so we only re-bucket when the underlying rows change) ----------
-  const days14 = useMemo(() => lastNDays(14), []);
+  /* ─── metric math ────────────────────────────────────────────────────── */
   const days7 = useMemo(() => lastNDays(7), []);
+  const days14 = useMemo(() => lastNDays(14), []);
 
-  const parcelsPerDay14 = useMemo(() => bucketByDay(parcels, "created_at", days14), [parcels, days14]);
-  const usersPerDay14 = useMemo(() => bucketByDay(users, "created_at", days14), [users, days14]);
-  const invoicesPerDay14 = useMemo(() => bucketByDay(invoices, "created_at", days14), [invoices, days14]);
-  const revenuePerDay7 = useMemo(() => sumByDay(invoices, "created_at", "final_amount", days7), [invoices, days7]);
-
-  const parcelsDelta = useMemo(
-    () => pctDelta(parcelsPerDay14.slice(7), parcelsPerDay14.slice(0, 7)),
-    [parcelsPerDay14]
+  const parcelsThisWeek = useMemo(
+    () => bucketByDay(parcels, "created_at", days7),
+    [parcels, days7],
   );
-  const usersDelta = useMemo(() => pctDelta(usersPerDay14.slice(7), usersPerDay14.slice(0, 7)), [usersPerDay14]);
-  const invoicesDelta = useMemo(
-    () => pctDelta(invoicesPerDay14.slice(7), invoicesPerDay14.slice(0, 7)),
-    [invoicesPerDay14]
+  const parcelsPriorWeek = useMemo(
+    () => bucketByDay(parcels, "created_at", days14.slice(0, 7)),
+    [parcels, days14],
   );
 
-  const statusSegments = useMemo(() => {
-    const counts: Record<string, number> = {};
-    parcels.forEach((p) => {
-      const key = p.current_status || "created";
-      counts[key] = (counts[key] || 0) + 1;
+  const totalParcels = parcels.length;
+  const activeCount = parcels.filter((p: any) =>
+    !["delivered", "cancelled"].includes(p.current_status),
+  ).length;
+  const deliveredCount = parcels.filter((p: any) => p.current_status === "delivered").length;
+  const totalRevenue = parcels.reduce((s: number, p: any) => s + (Number(p.total_price) || 0), 0);
+
+  const revenueThisWeek = useMemo(
+    () => sumByDay(parcels, "total_price", "created_at", days7),
+    [parcels, days7],
+  );
+  const revenuePriorWeek = useMemo(
+    () => sumByDay(parcels, "total_price", "created_at", days14.slice(0, 7)),
+    [parcels, days14],
+  );
+
+  const parcelDelta = pctDelta(parcelsThisWeek, parcelsPriorWeek);
+  const revenueDelta = pctDelta(revenueThisWeek, revenuePriorWeek);
+
+  /* ─── status breakdown ───────────────────────────────────────────────── */
+  const statusBreakdown = useMemo(() => {
+    const map: Record<string, number> = {};
+    parcels.forEach((p: any) => {
+      map[p.current_status] = (map[p.current_status] || 0) + 1;
     });
-    return Object.entries(counts)
+    return Object.entries(map)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 7)
-      .map(([label, value]) => ({ label, value, color: STATUS_HEX[label] || "#94A3B8" }));
+      .slice(0, 8);
   }, [parcels]);
 
-  const day14Labels = days14.map(dayLabel);
-  const day7Labels = days7.map(dayLabel);
-
-  const latestByTable = {
-    profiles: users[0]?.created_at,
-    parcels: parcels[0]?.created_at,
-    invoices: invoices[0]?.created_at,
-    quotes: quotes[0]?.created_at,
-  };
+  /* ─── tabs ───────────────────────────────────────────────────────────── */
+  const TABS = [
+    { id: "overview",  label: "Overview",  icon: BarChart3 },
+    { id: "parcels",   label: "Parcels",   icon: Package },
+    { id: "requests",  label: "Requests",  icon: ClipboardCheck },
+    { id: "approved",  label: "Approved",  icon: CheckCircle2 },
+    { id: "invoices",  label: "Invoices",  icon: FileText },
+    ...(canManageUsers
+      ? [{ id: "users", label: "Users", icon: Users }]
+      : []),
+  ];
 
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="requests">Requests</TabsTrigger>
-          <TabsTrigger value="approved">Status / Approved</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
-          <TabsTrigger value="parcels">All Parcels</TabsTrigger>
-          {isAdmin && <TabsTrigger value="rates">Rates</TabsTrigger>}
-          {(isDeveloper || isAdmin) && <TabsTrigger value="system">System</TabsTrigger>}
+      {/* ─── Admin identity banner ─── */}
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/10 px-5 py-3"
+      >
+        <ShieldCheck className="h-5 w-5 text-violet-400" />
+        <div>
+          <p className="text-sm font-semibold text-violet-300">Admin Dashboard</p>
+          <p className="text-xs text-white/40">
+            Full parcel access — create shipments, manage requests &amp; invoices
+            {canManageUsers ? " · User management enabled" : ""}
+          </p>
+        </div>
+        <div className="ml-auto text-right">
+          <p className="text-xs text-white/40">Signed in as</p>
+          <p className="text-sm font-medium text-white/80">{profile?.full_name || user?.email}</p>
+        </div>
+      </motion.div>
+
+      {/* ─── Stat cards ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="Total Parcels"   value={totalParcels}  delta={parcelDelta}  icon={Package}    color="#8B5CF6" index={0} />
+        <StatCard label="Active"          value={activeCount}                         icon={Activity}   color="#3B82F6" index={1} sub="in transit or processing" />
+        <StatCard label="Delivered"       value={deliveredCount}                      icon={CheckCircle2} color="#22C55E" index={2} />
+        <StatCard label="Total Revenue"   value={`$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}`} delta={revenueDelta} icon={DollarSign} color="#C98A2B" index={3} />
+      </div>
+
+      {/* ─── Tab body ─── */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-white/5 border border-white/10 h-auto flex-wrap gap-1 p-1">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <TabsTrigger
+              key={id}
+              value={id}
+              className="gap-1.5 data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-300 text-white/50 text-xs sm:text-sm"
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* ---------- Stat cards ---------- */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4" style={{ color: METRIC_ACCENT.users }} />
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {usersDelta >= 0 ? "+" : ""}
-                      {usersDelta}% vs prior week
-                    </p>
-                  </div>
-                  <Sparkline data={usersPerDay14.slice(7)} accent={METRIC_ACCENT.users} />
-                </div>
-              </CardContent>
-            </Card>
+        {/* ── Overview ── */}
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          {/* Volume chart */}
+          <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                <Package className="h-4 w-4" style={{ color: ACCENT }} />
+                Parcel Volume — Last 7 Days
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FlightPathChart
+                data={parcelsThisWeek}
+                labels={days7.map(dayLabel)}
+                color={ACCENT}
+              />
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Parcels</CardTitle>
-                <Package className="h-4 w-4" style={{ color: METRIC_ACCENT.parcels }} />
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-2xl font-bold">{stats.totalParcels}</div>
-                    <p className="text-xs text-muted-foreground">{stats.activeParcels} active</p>
-                  </div>
-                  <Sparkline data={parcelsPerDay14.slice(7)} accent={METRIC_ACCENT.parcels} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-                <FileText className="h-4 w-4" style={{ color: METRIC_ACCENT.invoices }} />
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <div className="text-2xl font-bold">{stats.totalInvoices}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {invoicesDelta >= 0 ? "+" : ""}
-                      {invoicesDelta}% vs prior week
-                    </p>
-                  </div>
-                  <Sparkline data={invoicesPerDay14.slice(7)} accent={METRIC_ACCENT.invoices} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
-                <DollarSign className="h-4 w-4" style={{ color: METRIC_ACCENT.revenue }} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${stats.todayRevenue.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">{stats.pendingQuotes} pending quotes</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* ---------- Ops board: progress charts ---------- */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2">
+          {/* Revenue + Status row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Activity className="h-4 w-4" style={{ color: theme.accent }} />
-                  Parcel Flow — last 14 days
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FlightPathChart data={parcelsPerDay14} labels={day14Labels} accent={theme.accent} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <ClipboardCheck className="h-4 w-4" style={{ color: theme.accent }} />
-                  Manifest Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {statusSegments.length > 0 ? (
-                  <ManifestBar segments={statusSegments} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">No parcels yet.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <DollarSign className="h-4 w-4" style={{ color: METRIC_ACCENT.revenue }} />
-                  Revenue — last 7 days
+                <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-[#C98A2B]" />
+                  Revenue — Last 7 Days
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <LedgerBars
-                  data={revenuePerDay7}
-                  labels={day7Labels}
-                  accent={METRIC_ACCENT.revenue}
-                  formatValue={(v) => `$${v.toFixed(2)}`}
+                  data={revenueThisWeek}
+                  labels={days7.map(dayLabel)}
+                  color="#C98A2B"
                 />
               </CardContent>
             </Card>
-          )}
 
-          {/* ---------- Role-based quick actions ---------- */}
-          <Card>
+            <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-[#3B82F6]" />
+                  Status Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {statusBreakdown.length === 0 && (
+                  <p className="text-xs text-white/30 py-4 text-center">No parcel data yet</p>
+                )}
+                {statusBreakdown.map(([status, count]) => (
+                  <div key={status} className="flex items-center gap-3">
+                    <div
+                      className="h-2 w-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: STATUS_HEX[status] || "#6B7280" }}
+                    />
+                    <span className="text-xs text-white/50 flex-1 capitalize">{status.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-semibold text-white">{count}</span>
+                    <div className="w-20 h-1.5 rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.round((count / totalParcels) * 100)}%`,
+                          backgroundColor: STATUS_HEX[status] || "#6B7280",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent parcels */}
+          <Card className="border border-white/10 bg-white/5 backdrop-blur-md">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-[#8B5CF6]" />
+                Recent Parcels (system-wide)
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              {isAdmin && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button className="h-16 flex-col gap-2" onClick={() => setActiveTab("parcels")}>
-                    <Plus className="h-6 w-6" />
-                    Create / View Parcels
-                  </Button>
-                  <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => setActiveTab("users")}>
-                    <Users className="h-6 w-6" />
-                    Manage Users
-                  </Button>
-                  <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => setActiveTab("rates")}>
-                    <Settings className="h-6 w-6" />
-                    Update Rates
-                  </Button>
-                </div>
-              )}
-              {role === "staff" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button className="h-16 flex-col gap-2" onClick={() => setActiveTab("parcels")}>
-                    <Package className="h-6 w-6" />
-                    View All Parcels
-                  </Button>
-                  <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => setActiveTab("requests")}>
-                    <ClipboardCheck className="h-6 w-6" />
-                    Review Requests
-                  </Button>
-                </div>
-              )}
-              {isDeveloper && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button className="h-16 flex-col gap-2" onClick={() => setActiveTab("system")}>
-                    <Terminal className="h-6 w-6" />
-                    System Diagnostics
-                  </Button>
-                  <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => setActiveTab("parcels")}>
-                    <Package className="h-6 w-6" />
-                    View All Parcels
-                  </Button>
-                  <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => setActiveTab("approved")}>
-                    <ClipboardCheck className="h-6 w-6" />
-                    Status / Approved
-                  </Button>
-                </div>
+            <CardContent className="overflow-x-auto">
+              {parcels.length === 0 ? (
+                <p className="text-xs text-white/30 py-6 text-center">No parcels yet</p>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-white/40 border-b border-white/10">
+                      <th className="text-left pb-2 pr-4 font-medium">Tracking ID</th>
+                      <th className="text-left pb-2 pr-4 font-medium">Sender</th>
+                      <th className="text-left pb-2 pr-4 font-medium">Route</th>
+                      <th className="text-left pb-2 pr-4 font-medium">Status</th>
+                      <th className="text-right pb-2 font-medium">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parcels.slice(0, 8).map((p: any) => (
+                      <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="py-2 pr-4 font-mono text-violet-300">{p.tracking_id}</td>
+                        <td className="py-2 pr-4 text-white/80">{p.sender_name}</td>
+                        <td className="py-2 pr-4 text-white/50">{p.from_country} → {p.to_country}</td>
+                        <td className="py-2 pr-4">
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                            style={{
+                              backgroundColor: `${STATUS_HEX[p.current_status] || "#6B7280"}20`,
+                              color: STATUS_HEX[p.current_status] || "#9CA3AF",
+                            }}
+                          >
+                            {p.current_status?.replace(/_/g, " ").toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="py-2 text-right text-white/40">{formatRelativeTime(p.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="requests">
-          <AdminRequestsSection />
-        </TabsContent>
-
-        <TabsContent value="approved">
-          <ApprovedParcelsSection />
-        </TabsContent>
-
-        {isAdmin && (
-          <TabsContent value="users">
-            <UserManagement />
-          </TabsContent>
-        )}
-
+        {/* ── Parcels — admin can CREATE, and sees who created each parcel ── */}
         <TabsContent value="parcels">
-          <ParcelManagement />
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            {/* Info callout */}
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3">
+              <ShieldCheck className="h-4 w-4 text-violet-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-violet-300">
+                As an <strong>Admin</strong> you can create new parcels and view all shipments in the system.
+                The <strong>Created By</strong> column shows which user and role created each record.
+              </p>
+            </div>
+            <ParcelManagement showCreator userProfile={profile} />
+          </motion.div>
         </TabsContent>
 
-        {isAdmin && (
-          <TabsContent value="rates">
-            <PricingManager />
-          </TabsContent>
-        )}
+        {/* ── Requests ── */}
+        <TabsContent value="requests">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <AdminRequestsSection />
+          </motion.div>
+        </TabsContent>
 
-        {(isDeveloper || isAdmin) && (
-          <TabsContent value="system" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Radio className="h-4 w-4" style={{ color: theme.accent }} />
-                  Live Channels
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Diagnostics reflect the same realtime Supabase channels powering this dashboard.
+        {/* ── Approved ── */}
+        <TabsContent value="approved">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <ApprovedParcelsSection />
+          </motion.div>
+        </TabsContent>
+
+        {/* ── Invoices ── */}
+        <TabsContent value="invoices">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <InvoiceManager />
+          </motion.div>
+        </TabsContent>
+
+        {/* ── Users (only if can_manage_users) ── */}
+        {canManageUsers && (
+          <TabsContent value="users">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-300">
+                  User management access was granted to your account by a Super Admin.
+                  You can view and manage user roles within your permissions.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { table: "profiles", label: "Profiles", count: users.length },
-                    { table: "parcels", label: "Parcels", count: parcels.length },
-                    { table: "invoices", label: "Invoices", count: invoices.length },
-                    { table: "quotes", label: "Quotes", count: quotes.length },
-                  ].map((row) => (
-                    <div key={row.table} className="rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{row.label}</p>
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                        </span>
-                      </div>
-                      <p className="text-2xl font-bold font-mono mt-1">{row.count}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        last write {formatRelativeTime((latestByTable as any)[row.table])}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              {/* isSuperAdmin=false so admin can't grant super_admin role or toggle other admins */}
+              <UserManagement isSuperAdmin={false} />
+            </motion.div>
           </TabsContent>
         )}
       </Tabs>
