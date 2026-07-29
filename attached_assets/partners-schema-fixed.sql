@@ -1,4 +1,18 @@
--- ─── STEP 1: partners table (must exist before profiles FK is added) ──────────
+-- ============================================================
+-- partners + pricing_config migration (safe to re-run)
+-- ============================================================
+
+-- ─── STEP 1: set_updated_at helper (idempotent) ───────────────────────────────
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+
+-- ─── STEP 2: partners table ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.partners (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name            text NOT NULL,
@@ -10,34 +24,29 @@ CREATE TABLE IF NOT EXISTS public.partners (
   address         text,
   contact_person  text,
   notes           text,
-  temp_password   text,          -- plain-text temp password set by super admin
+  temp_password   text,
   is_active       boolean NOT NULL DEFAULT true,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- auto-update updated_at
-CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$;
-
+-- drop before recreate so this is safe on re-runs
+DROP TRIGGER IF EXISTS partners_updated_at ON public.partners;
 CREATE TRIGGER partners_updated_at
   BEFORE UPDATE ON public.partners
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
--- ─── STEP 2: add partner_id to profiles (partners table now exists for the FK) ─
+-- ─── STEP 3: add partner_id to profiles (partners now exists for the FK) ──────
+-- partners table must already exist above before this FK can reference it
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS partner_id uuid REFERENCES public.partners(id) ON DELETE SET NULL;
 
 
--- ─── STEP 3: RLS policies on partners (profiles.partner_id now exists) ────────
+-- ─── STEP 4: RLS on partners (profiles.partner_id now exists) ─────────────────
 ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "super_admin full access" ON public.partners;
 CREATE POLICY "super_admin full access" ON public.partners
   USING (
     EXISTS (
@@ -47,6 +56,7 @@ CREATE POLICY "super_admin full access" ON public.partners
     )
   );
 
+DROP POLICY IF EXISTS "admin_partner read own" ON public.partners;
 CREATE POLICY "admin_partner read own" ON public.partners
   FOR SELECT
   USING (
@@ -57,11 +67,10 @@ CREATE POLICY "admin_partner read own" ON public.partners
   );
 
 
--- ─── STEP 4: pricing_config table ─────────────────────────────────────────────
+-- ─── STEP 5: pricing_config table ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.pricing_config (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id           uuid REFERENCES public.partners(id) ON DELETE CASCADE,
-  -- NULL partner_id = global default rates
   base_rates           jsonb NOT NULL DEFAULT '{"standard":15,"express":25,"overnight":45,"economic":10,"priority":35}'::jsonb,
   currency_rates       jsonb NOT NULL DEFAULT '{"USD":1.0,"EUR":0.85,"GBP":0.75,"AED":3.67,"PKR":285.0}'::jsonb,
   weight_multipliers   jsonb NOT NULL DEFAULT '{"light":1.0,"medium":1.2,"heavy":1.5,"extra_heavy":2.0}'::jsonb,
@@ -72,13 +81,16 @@ CREATE TABLE IF NOT EXISTS public.pricing_config (
   CONSTRAINT pricing_config_partner_unique UNIQUE (partner_id)
 );
 
+DROP TRIGGER IF EXISTS pricing_config_updated_at ON public.pricing_config;
 CREATE TRIGGER pricing_config_updated_at
   BEFORE UPDATE ON public.pricing_config
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- ─── STEP 5: RLS policies on pricing_config (profiles.partner_id now exists) ──
+
+-- ─── STEP 6: RLS on pricing_config ───────────────────────────────────────────
 ALTER TABLE public.pricing_config ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "super_admin full access" ON public.pricing_config;
 CREATE POLICY "super_admin full access" ON public.pricing_config
   USING (
     EXISTS (
@@ -88,6 +100,7 @@ CREATE POLICY "super_admin full access" ON public.pricing_config
     )
   );
 
+DROP POLICY IF EXISTS "admin_partner read own rates" ON public.pricing_config;
 CREATE POLICY "admin_partner read own rates" ON public.pricing_config
   FOR SELECT
   USING (
@@ -97,6 +110,7 @@ CREATE POLICY "admin_partner read own rates" ON public.pricing_config
     )
   );
 
+DROP POLICY IF EXISTS "admin_partner update own rates" ON public.pricing_config;
 CREATE POLICY "admin_partner update own rates" ON public.pricing_config
   FOR UPDATE
   USING (
@@ -107,7 +121,7 @@ CREATE POLICY "admin_partner update own rates" ON public.pricing_config
   );
 
 
--- ─── STEP 6: seed global default rate row ─────────────────────────────────────
+-- ─── STEP 7: seed global default rate row ────────────────────────────────────
 INSERT INTO public.pricing_config (partner_id)
 VALUES (NULL)
 ON CONFLICT (partner_id) DO NOTHING;
